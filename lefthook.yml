@@ -1,0 +1,30 @@
+# Pre-commit hooks. Activate with `bunx lefthook install` after cloning.
+#
+# Goal: cheap, fast checks on STAGED files only. Anything slow runs in CI.
+# Don't add the full test suite here — keep commit feedback under ~3s.
+
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      run: bun run typecheck
+      glob: 'src/**/*.{ts,tsx}'
+      tags: [type]
+    lint:
+      run: bunx biome check {staged_files}
+      glob: 'src/**/*.{ts,tsx,js,json}'
+      tags: [lint]
+    format:
+      run: bunx biome format --write {staged_files} && git add {staged_files}
+      glob: 'src/**/*.{ts,tsx,js,json}'
+      stage_fixed: true
+      tags: [format]
+
+commit-msg:
+  commands:
+    conventional:
+      # Conventional Commits prefix check. Cheap regex; full enforcement is
+      # CI's job. This catches the obvious typos before they hit the remote.
+      run: |
+        head -n1 {1} | grep -qE '^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\([^)]+\))?!?: .+' \
+          || (echo 'commit message must follow Conventional Commits (feat: ..., fix: ..., chore: ...)'; exit 1)
