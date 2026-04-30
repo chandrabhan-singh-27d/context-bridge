@@ -16,14 +16,15 @@ MCP (Model Context Protocol) server that gives any AI assistant — Claude Code,
 
 ✅ Phase 0 (PR #1) — bootstrap.
 ✅ Phase 1 (PR #2) — MCP skeleton: stdio transport + `ping` tool.
-🚧 Phase 2 (PR #3) — Foundation primitives: Result/AppError/env/logging/LRU.
+✅ Phase 2 (PR #3) — Foundation primitives: Result/AppError/env/logging/LRU.
+🚧 Phase 3 (PR #4) — Governance docs + tooling: ARCHITECTURE/CLAUDE/AGENTS/SECURITY/PR template/dependabot/lefthook.
 
 | PR | Phase | Scope |
 |----|-------|-------|
 | #1 | Bootstrap | Project scaffold, lint, typecheck. ✅ |
 | #2 | MCP skeleton | stdio transport, `ping` tool, installable in Claude Code. ✅ |
-| #3 | Foundation primitives | `Result<T,E>`, `AppError` discriminated union, Zod env loader, structured logger, LRU+TTL cache. 🚧 |
-| #4 | Governance docs | `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `SECURITY.md`, PR template, dependabot, lefthook. |
+| #3 | Foundation primitives | `Result<T,E>`, `AppError` discriminated union, Zod env loader, structured logger, LRU+TTL cache. ✅ |
+| #4 | Governance docs | `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `SECURITY.md`, PR template, dependabot, lefthook. 🚧 |
 | #5 | GitHub auth | Octokit init, auth check, `get_repo_info` tool. |
 | #6 | Issues + PRs | `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`. |
 | #7 | CI + commits + code | `get_ci_status`, `get_commit_history`, `search_code`. |
