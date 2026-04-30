@@ -14,12 +14,13 @@ MCP (Model Context Protocol) server that gives any AI assistant — Claude Code,
 
 ## Status
 
-🚧 Phase 0 — bootstrap. PR roadmap below.
+✅ Phase 0 (PR #1) — bootstrap.
+🚧 Phase 1 (PR #2) — MCP skeleton: stdio transport + `ping` tool.
 
 | PR | Phase | Scope |
 |----|-------|-------|
-| #1 | Bootstrap | This PR. Project scaffold, CI, lint, typecheck. |
-| #2 | MCP skeleton | stdio transport, `ping` tool, installable in Claude Code. |
+| #1 | Bootstrap | Project scaffold, lint, typecheck. ✅ |
+| #2 | MCP skeleton | stdio transport, `ping` tool, installable in Claude Code. 🚧 |
 | #3 | GitHub auth | Zod env loader, Octokit init, `get_repo_info` tool. |
 | #4 | Issues + PRs | `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`. |
 | #5 | CI + commits + code | `get_ci_status`, `get_commit_history`, `search_code`. |
@@ -54,13 +55,27 @@ bun run dev
 
 ```
 src/
-└── server.ts          # entry (MCP server stdio transport — lands in PR #2)
+├── server.ts                  # entry: builds MCP server + connects stdio transport
+└── mcp/
+    ├── server.ts              # buildServer() factory + SERVER_INFO
+    ├── server.test.ts
+    └── tools/
+        ├── index.ts           # registerTools() — every new tool registers here
+        ├── ping.ts            # health-check tool
+        └── ping.test.ts
 
-.github/workflows/    # CI: typecheck + lint + test on every push/PR
 .env.example          # required + optional env vars, documented
 biome.json            # lint + format config
 tsconfig.json         # strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes
 ```
+
+## Installing in Claude Code (after PR #2 merges)
+
+```sh
+claude mcp add context-bridge bun run /path/to/context-bridge/src/server.ts
+```
+
+Then in any Claude Code session: `> ping` should return `pong @ <timestamp>`.
 
 ## License
 
