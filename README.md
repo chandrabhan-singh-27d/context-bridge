@@ -15,20 +15,23 @@ MCP (Model Context Protocol) server that gives any AI assistant — Claude Code,
 ## Status
 
 ✅ Phase 0 (PR #1) — bootstrap.
-🚧 Phase 1 (PR #2) — MCP skeleton: stdio transport + `ping` tool.
+✅ Phase 1 (PR #2) — MCP skeleton: stdio transport + `ping` tool.
+🚧 Phase 2 (PR #3) — Foundation primitives: Result/AppError/env/logging/LRU.
 
 | PR | Phase | Scope |
 |----|-------|-------|
 | #1 | Bootstrap | Project scaffold, lint, typecheck. ✅ |
-| #2 | MCP skeleton | stdio transport, `ping` tool, installable in Claude Code. 🚧 |
-| #3 | GitHub auth | Zod env loader, Octokit init, `get_repo_info` tool. |
-| #4 | Issues + PRs | `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`. |
-| #5 | CI + commits + code | `get_ci_status`, `get_commit_history`, `search_code`. |
-| #6 | Resources + Prompts | `repo://readme`, `repo://structure`, `repo://recent-activity`, `review-pr`, `investigate-issue`. |
-| #7 | Cache layer | `bun:sqlite` 5-min TTL response cache. |
-| #8 | Rate-limit awareness | `X-RateLimit-Remaining` thresholds. |
-| #9 | Companion UI | Hono + Vite + React, MCP client demo. |
-| #10 | Distribution | `bun build --compile`, npm publish prep, README polish. |
+| #2 | MCP skeleton | stdio transport, `ping` tool, installable in Claude Code. ✅ |
+| #3 | Foundation primitives | `Result<T,E>`, `AppError` discriminated union, Zod env loader, structured logger, LRU+TTL cache. 🚧 |
+| #4 | Governance docs | `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `SECURITY.md`, PR template, dependabot, lefthook. |
+| #5 | GitHub auth | Octokit init, auth check, `get_repo_info` tool. |
+| #6 | Issues + PRs | `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`. |
+| #7 | CI + commits + code | `get_ci_status`, `get_commit_history`, `search_code`. |
+| #8 | Resources + Prompts | `repo://readme`, `repo://structure`, `repo://recent-activity`, `review-pr`, `investigate-issue`. |
+| #9 | Cache layer | `bun:sqlite` 5-min TTL response cache (uses LRU from PR #3 in front). |
+| #10 | Rate-limit awareness | `X-RateLimit-Remaining` thresholds. |
+| #11 | Companion UI | Hono + Vite + React, MCP client demo. |
+| #12 | Distribution | `bun build --compile`, npm publish prep, README polish. |
 
 ## Quick Start (dev)
 
@@ -51,11 +54,40 @@ bun run dev
 | `bun test` | Run all tests via Bun's native runner. |
 | `bun run build` | Compile to single static binary at `dist/context-bridge`. |
 
+## Engineering standards
+
+This project inherits the DocMind floor:
+
+- TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`.
+- `Result<T, E>` over `throw` for expected failures.
+- `AppError` discriminated union — every error has a `type` tag, every handler exhausts the union.
+- Zod-validated env loader. Never reach for `process.env.X` outside `src/config/env.ts`.
+- Structured JSON logger to stderr, automatic redaction of sensitive keys.
+- Vertical-slice feature folders. Pure handler / registration shim split for every tool.
+- Repository pattern (lands with the GitHub data layer in PR #5).
+- Per-IP token-bucket rate limiter (lands with PR #10).
+
+Plus Bun-native extras: `bun test` over Vitest, `bun:sqlite` over `better-sqlite3` (PR #9), single-binary distribution (PR #12).
+
 ## Project layout
 
 ```
 src/
 ├── server.ts                  # entry: builds MCP server + connects stdio transport
+├── config/
+│   ├── env.ts                 # Zod-validated env loader (Result-returning)
+│   └── env.test.ts
+├── lib/
+│   ├── result.ts              # Result<T, E> + helpers
+│   ├── result.test.ts
+│   ├── errors.ts              # AppError discriminated union
+│   ├── errors.test.ts
+│   ├── cache/
+│   │   ├── lru-cache.ts       # LRU+TTL primitive
+│   │   └── lru-cache.test.ts
+│   └── logging/
+│       ├── logger.ts          # structured JSON logger w/ redaction
+│       └── logger.test.ts
 └── mcp/
     ├── server.ts              # buildServer() factory + SERVER_INFO
     ├── server.test.ts
