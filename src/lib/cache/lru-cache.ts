@@ -3,8 +3,9 @@
  * tool-result memoization. Persistent (bun:sqlite) cache lands in PR #9 and
  * uses this in front for hot reads.
  *
- * Implementation: Map preserves insertion order in JS, so deletes + sets
- * are O(1) and enough for the 100-1000 entry sizes this project needs.
+ * Implementation: factory + closure (no classes). Map preserves insertion
+ * order in JS, so deletes + sets are O(1) and enough for the 100-1000 entry
+ * sizes this project needs.
  */
 
 export interface LruCacheOptions {
@@ -18,69 +19,73 @@ interface Entry<V> {
   readonly expiresAt: number;
 }
 
-export class LruCache<K, V> {
-  private readonly map = new Map<K, Entry<V>>();
-  private readonly maxEntries: number;
-  private readonly defaultTtlMs: number;
-  private readonly now: () => number;
+export interface LruCache<K, V> {
+  readonly size: number;
+  has(key: K): boolean;
+  get(key: K): V | undefined;
+  set(key: K, value: V, ttlMs?: number): void;
+  delete(key: K): boolean;
+  clear(): void;
+}
 
-  constructor(opts: LruCacheOptions) {
-    if (opts.maxEntries <= 0) {
-      throw new Error('LruCache: maxEntries must be > 0');
-    }
-    this.maxEntries = opts.maxEntries;
-    this.defaultTtlMs = opts.defaultTtlMs ?? Number.POSITIVE_INFINITY;
-    this.now = opts.clock ?? Date.now;
+export function createLruCache<K, V>(opts: LruCacheOptions): LruCache<K, V> {
+  if (opts.maxEntries <= 0) {
+    throw new Error('LruCache: maxEntries must be > 0');
   }
+  const maxEntries = opts.maxEntries;
+  const defaultTtlMs = opts.defaultTtlMs ?? Number.POSITIVE_INFINITY;
+  const now = opts.clock ?? Date.now;
+  const map = new Map<K, Entry<V>>();
 
-  get size(): number {
-    return this.map.size;
-  }
+  const isExpired = (entry: Entry<V>): boolean =>
+    entry.expiresAt !== Number.POSITIVE_INFINITY && entry.expiresAt <= now();
 
-  has(key: K): boolean {
-    const entry = this.map.get(key);
-    if (entry === undefined) return false;
-    if (this.expired(entry)) {
-      this.map.delete(key);
-      return false;
-    }
-    return true;
-  }
+  return {
+    get size() {
+      return map.size;
+    },
 
-  get(key: K): V | undefined {
-    const entry = this.map.get(key);
-    if (entry === undefined) return undefined;
-    if (this.expired(entry)) {
-      this.map.delete(key);
-      return undefined;
-    }
-    // refresh recency
-    this.map.delete(key);
-    this.map.set(key, entry);
-    return entry.value;
-  }
+    has(key) {
+      const entry = map.get(key);
+      if (entry === undefined) return false;
+      if (isExpired(entry)) {
+        map.delete(key);
+        return false;
+      }
+      return true;
+    },
 
-  set(key: K, value: V, ttlMs: number = this.defaultTtlMs): void {
-    const expiresAt =
-      ttlMs === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : this.now() + ttlMs;
-    if (this.map.has(key)) this.map.delete(key);
-    this.map.set(key, { value, expiresAt });
-    while (this.map.size > this.maxEntries) {
-      const oldest = this.map.keys().next();
-      if (oldest.done === true) break;
-      this.map.delete(oldest.value);
-    }
-  }
+    get(key) {
+      const entry = map.get(key);
+      if (entry === undefined) return undefined;
+      if (isExpired(entry)) {
+        map.delete(key);
+        return undefined;
+      }
+      // refresh recency
+      map.delete(key);
+      map.set(key, entry);
+      return entry.value;
+    },
 
-  delete(key: K): boolean {
-    return this.map.delete(key);
-  }
+    set(key, value, ttlMs = defaultTtlMs) {
+      const expiresAt =
+        ttlMs === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : now() + ttlMs;
+      if (map.has(key)) map.delete(key);
+      map.set(key, { value, expiresAt });
+      while (map.size > maxEntries) {
+        const oldest = map.keys().next();
+        if (oldest.done === true) break;
+        map.delete(oldest.value);
+      }
+    },
 
-  clear(): void {
-    this.map.clear();
-  }
+    delete(key) {
+      return map.delete(key);
+    },
 
-  private expired(entry: Entry<V>): boolean {
-    return entry.expiresAt !== Number.POSITIVE_INFINITY && entry.expiresAt <= this.now();
-  }
+    clear() {
+      map.clear();
+    },
+  };
 }

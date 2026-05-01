@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { LruCache } from './lru-cache.ts';
+import { createLruCache } from './lru-cache.ts';
 
-describe('LruCache', () => {
+describe('createLruCache', () => {
   test('rejects invalid sizes', () => {
-    expect(() => new LruCache({ maxEntries: 0 })).toThrow();
-    expect(() => new LruCache({ maxEntries: -1 })).toThrow();
+    expect(() => createLruCache({ maxEntries: 0 })).toThrow();
+    expect(() => createLruCache({ maxEntries: -1 })).toThrow();
   });
 
   test('basic set/get/has/delete', () => {
-    const c = new LruCache<string, number>({ maxEntries: 3 });
+    const c = createLruCache<string, number>({ maxEntries: 3 });
     c.set('a', 1);
     expect(c.has('a')).toBe(true);
     expect(c.get('a')).toBe(1);
@@ -18,7 +18,7 @@ describe('LruCache', () => {
   });
 
   test('evicts least recently used when at capacity', () => {
-    const c = new LruCache<string, number>({ maxEntries: 2 });
+    const c = createLruCache<string, number>({ maxEntries: 2 });
     c.set('a', 1);
     c.set('b', 2);
     c.get('a'); // bump a
@@ -30,7 +30,7 @@ describe('LruCache', () => {
 
   test('expires entries past TTL', () => {
     let now = 0;
-    const c = new LruCache<string, number>({
+    const c = createLruCache<string, number>({
       maxEntries: 10,
       defaultTtlMs: 100,
       clock: () => now,
@@ -44,7 +44,7 @@ describe('LruCache', () => {
 
   test('per-call TTL overrides default', () => {
     let now = 0;
-    const c = new LruCache<string, number>({
+    const c = createLruCache<string, number>({
       maxEntries: 10,
       defaultTtlMs: 100,
       clock: () => now,
@@ -57,7 +57,7 @@ describe('LruCache', () => {
   });
 
   test('clear empties the cache', () => {
-    const c = new LruCache<string, number>({ maxEntries: 3 });
+    const c = createLruCache<string, number>({ maxEntries: 3 });
     c.set('a', 1);
     c.set('b', 2);
     c.clear();
@@ -65,7 +65,7 @@ describe('LruCache', () => {
   });
 
   test('updating an existing key keeps it most-recent', () => {
-    const c = new LruCache<string, number>({ maxEntries: 2 });
+    const c = createLruCache<string, number>({ maxEntries: 2 });
     c.set('a', 1);
     c.set('b', 2);
     c.set('a', 10); // a is now newest
