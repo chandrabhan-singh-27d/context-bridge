@@ -33,6 +33,21 @@ describe('redact', () => {
     expect(redact('hello')).toBe('hello');
     expect(redact(null)).toBe(null);
   });
+
+  test('replaces non-plain objects (Headers, class instances) with sentinel', () => {
+    const headers = new Headers({ authorization: 'Bearer secret' });
+    const out = redact({ res: { headers } });
+    expect(JSON.stringify(out)).not.toContain('Bearer secret');
+    expect((out as unknown as { res: { headers: string } }).res.headers).toBe(
+      '[REDACTED-NON-PLAIN]',
+    );
+  });
+
+  test('replaces Map/Set with sentinel', () => {
+    const out = redact({ m: new Map([['token', 'gh_xxx']]), s: new Set(['gh_yyy']) });
+    expect(JSON.stringify(out)).not.toContain('gh_xxx');
+    expect(JSON.stringify(out)).not.toContain('gh_yyy');
+  });
 });
 
 describe('createLogger', () => {

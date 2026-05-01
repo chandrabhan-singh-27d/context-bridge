@@ -96,10 +96,17 @@ export const AppError = {
     message,
   }),
 
-  internal: (message: string, cause?: unknown): InternalError =>
-    cause === undefined
-      ? { type: 'INTERNAL_ERROR', message }
-      : { type: 'INTERNAL_ERROR', message, cause },
+  internal: (message: string, cause?: unknown): InternalError => {
+    const base: InternalError = { type: 'INTERNAL_ERROR', message };
+    if (cause === undefined) return base;
+    Object.defineProperty(base, 'cause', {
+      value: cause,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+    return base;
+  },
 } as const;
 
 /**

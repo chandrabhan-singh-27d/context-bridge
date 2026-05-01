@@ -49,11 +49,18 @@ export function redact<T>(value: T): T {
   if (value === null || value === undefined) return value;
   if (typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((v) => redact(v)) as unknown as T;
+  if (!isPlainObject(value)) return '[REDACTED-NON-PLAIN]' as unknown as T;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
     out[k] = REDACT_KEY_PATTERN.test(k) ? REDACTED : redact(v);
   }
   return out as T;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object') return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 export function createLogger(opts: LoggerOptions = {}): Logger {
