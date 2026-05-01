@@ -4,8 +4,8 @@ import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import type { RepoCoords } from '../../github/schemas.ts';
 import type { AppError } from '../../lib/errors.ts';
-import { formatAppError } from '../../lib/errors.ts';
-import { type Result, ok, tryCatch } from '../../lib/result.ts';
+import { AppError as AppErr, formatAppError } from '../../lib/errors.ts';
+import { type Result, err, ok, tryCatch } from '../../lib/result.ts';
 
 export const README_URI = 'repo://readme';
 
@@ -20,8 +20,12 @@ export async function readReadme(
   );
   if (!r.ok) return r;
   const d = r.value.data;
-  // GitHub returns base64-encoded content by default.
-  const decoded = Buffer.from(d.content, d.encoding as BufferEncoding).toString('utf8');
+  if (d.encoding !== 'base64') {
+    return err(
+      AppErr.internal(`unexpected readme encoding from github: "${d.encoding}" (expected base64)`),
+    );
+  }
+  const decoded = Buffer.from(d.content, 'base64').toString('utf8');
   return ok(decoded);
 }
 

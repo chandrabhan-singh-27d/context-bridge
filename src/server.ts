@@ -9,8 +9,11 @@ import { buildServer } from './mcp/server.ts';
 
 function parseDefaultRepo(slug: string | undefined): RepoCoords | null {
   if (slug === undefined) return null;
-  const [owner, repo] = slug.split('/');
-  if (owner === undefined || repo === undefined) return null;
+  const trimmed = slug.trim();
+  const parts = trimmed.split('/');
+  if (parts.length !== 2) return null;
+  const [owner, repo] = parts;
+  if (owner === undefined || owner === '' || repo === undefined || repo === '') return null;
   return { owner, repo };
 }
 
@@ -32,6 +35,11 @@ async function main(): Promise<void> {
   log.info('github authenticated', { login: auth.value.login });
 
   const defaultRepo = parseDefaultRepo(env.DEFAULT_REPO);
+  if (defaultRepo === null) {
+    log.warn(
+      'DEFAULT_REPO not set — repo:// resources (readme/structure/recent-activity) disabled',
+    );
+  }
   const server = buildServer({ github, defaultRepo });
   const transport = new StdioServerTransport();
   await server.connect(transport);
