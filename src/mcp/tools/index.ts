@@ -1,10 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GitHubClient } from '../../github/client.ts';
+import { registerGetCiStatus } from './get-ci-status.ts';
+import { registerGetCommitHistory } from './get-commit-history.ts';
 import { registerGetPrDiff } from './get-pr-diff.ts';
 import { registerGetPullRequest } from './get-pull-request.ts';
 import { registerGetRepoInfo } from './get-repo-info.ts';
 import { registerListReviewComments } from './list-review-comments.ts';
 import { registerPing } from './ping.ts';
+import { registerSearchCode } from './search-code.ts';
 import { registerSearchIssues } from './search-issues.ts';
 
 export interface ToolDeps {
@@ -18,4 +21,7 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
   registerGetPullRequest(server, deps.github);
   registerGetPrDiff(server, deps.github);
   registerListReviewComments(server, deps.github);
+  registerGetCiStatus(server, deps.github);
+  registerGetCommitHistory(server, deps.github);
+  registerSearchCode(server, deps.github);
 }
