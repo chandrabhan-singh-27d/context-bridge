@@ -11,6 +11,8 @@
  */
 
 import { Database } from 'bun:sqlite';
+import { AppError } from '../errors.ts';
+import { type Result, err, ok } from '../result.ts';
 
 export interface SqliteCacheOptions {
   readonly path?: string;
@@ -20,6 +22,7 @@ export interface SqliteCacheOptions {
 
 export interface SqliteCache {
   get(key: string): string | undefined;
+  getRemainingTtl(key: string): number | undefined;
   set(key: string, value: string, ttlMs?: number): void;
   delete(key: string): boolean;
   clear(): void;
@@ -29,21 +32,26 @@ export interface SqliteCache {
 
 const NEVER_EXPIRES = Number.MAX_SAFE_INTEGER;
 
-export function createSqliteCache(opts: SqliteCacheOptions = {}): SqliteCache {
+export function createSqliteCache(opts: SqliteCacheOptions = {}): Result<SqliteCache, AppError> {
   const path = opts.path ?? ':memory:';
   const defaultTtlMs = opts.defaultTtlMs ?? Number.POSITIVE_INFINITY;
   const now = opts.clock ?? Date.now;
 
-  const db = new Database(path);
-  db.run('PRAGMA journal_mode = WAL;');
-  db.run(
-    `CREATE TABLE IF NOT EXISTS cache (
-       key TEXT PRIMARY KEY,
-       value TEXT NOT NULL,
-       expires_at INTEGER NOT NULL
-     );`,
-  );
-  db.run('CREATE INDEX IF NOT EXISTS cache_expires_idx ON cache(expires_at);');
+  let db: Database;
+  try {
+    db = new Database(path);
+    db.run('PRAGMA journal_mode = WAL;');
+    db.run(
+      `CREATE TABLE IF NOT EXISTS cache (
+         key TEXT PRIMARY KEY,
+         value TEXT NOT NULL,
+         expires_at INTEGER NOT NULL
+       );`,
+    );
+    db.run('CREATE INDEX IF NOT EXISTS cache_expires_idx ON cache(expires_at);');
+  } catch (e) {
+    return err(AppError.internal(`failed to open sqlite cache at "${path}"`, e));
+  }
 
   const selectStmt = db.query<{ value: string; expires_at: number }, [string]>(
     'SELECT value, expires_at FROM cache WHERE key = ?',
@@ -56,7 +64,7 @@ export function createSqliteCache(opts: SqliteCacheOptions = {}): SqliteCache {
   const purgeStmt = db.query<unknown, [number]>('DELETE FROM cache WHERE expires_at <= ?');
   const clearStmt = db.query<unknown, []>('DELETE FROM cache');
 
-  return {
+  return ok({
     get(key) {
       const row = selectStmt.get(key);
       if (row === null) return undefined;
@@ -65,6 +73,18 @@ export function createSqliteCache(opts: SqliteCacheOptions = {}): SqliteCache {
         return undefined;
       }
       return row.value;
+    },
+
+    getRemainingTtl(key) {
+      const row = selectStmt.get(key);
+      if (row === null) return undefined;
+      if (row.expires_at === NEVER_EXPIRES) return Number.POSITIVE_INFINITY;
+      const remaining = row.expires_at - now();
+      if (remaining <= 0) {
+        deleteStmt.run(key);
+        return undefined;
+      }
+      return remaining;
     },
 
     set(key, value, ttlMs = defaultTtlMs) {
@@ -90,5 +110,5 @@ export function createSqliteCache(opts: SqliteCacheOptions = {}): SqliteCache {
     close() {
       db.close();
     },
-  };
+  });
 }
