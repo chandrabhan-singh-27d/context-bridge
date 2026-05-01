@@ -22,6 +22,14 @@ describe('readReadme', () => {
     expect(r.value).toBe(text);
   });
 
+  test('rejects non-base64 encoding with INTERNAL_ERROR', async () => {
+    const client = fakeClient(async () => ({ data: { content: '', encoding: 'none' } }));
+    const r = await readReadme(client, { owner: 'x', repo: 'y' });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.type).toBe('INTERNAL_ERROR');
+  });
+
   test('maps 404 to NOT_FOUND', async () => {
     const client = fakeClient(async () => {
       throw Object.assign(new Error('Not Found'), { status: 404 });
