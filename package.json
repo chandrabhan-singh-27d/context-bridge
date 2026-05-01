@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "octokit": "^5.0.5",
     "zod": "^4.4.1"
   },
   "devDependencies": {

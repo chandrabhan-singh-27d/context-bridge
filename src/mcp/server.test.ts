@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import type { GitHubClient } from '../github/client.ts';
 import { SERVER_INFO, buildServer } from './server.ts';
+
+const stubGitHub = {} as unknown as GitHubClient;
 
 describe('buildServer', () => {
   test('exposes the expected server identity', () => {
@@ -8,10 +11,8 @@ describe('buildServer', () => {
   });
 
   test('returns a usable McpServer instance', () => {
-    const server = buildServer();
+    const server = buildServer({ github: stubGitHub });
     expect(server).toBeDefined();
-    // McpServer exposes `.connect(transport)` — sanity check the API surface
-    // we depend on is present so a future SDK rename surfaces here.
     expect(typeof server.connect).toBe('function');
   });
 });
