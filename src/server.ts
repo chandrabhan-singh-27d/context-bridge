@@ -2,9 +2,17 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadEnv } from './config/env.ts';
 import { verifyAuth } from './github/auth.ts';
 import { createGitHubClient } from './github/client.ts';
+import type { RepoCoords } from './github/schemas.ts';
 import { formatAppError } from './lib/errors.ts';
 import { createLogger } from './lib/logging/logger.ts';
 import { buildServer } from './mcp/server.ts';
+
+function parseDefaultRepo(slug: string | undefined): RepoCoords | null {
+  if (slug === undefined) return null;
+  const [owner, repo] = slug.split('/');
+  if (owner === undefined || repo === undefined) return null;
+  return { owner, repo };
+}
 
 async function main(): Promise<void> {
   const envR = loadEnv();
@@ -23,7 +31,8 @@ async function main(): Promise<void> {
   }
   log.info('github authenticated', { login: auth.value.login });
 
-  const server = buildServer({ github });
+  const defaultRepo = parseDefaultRepo(env.DEFAULT_REPO);
+  const server = buildServer({ github, defaultRepo });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   log.info('mcp stdio transport connected');
