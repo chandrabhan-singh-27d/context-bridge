@@ -9,7 +9,13 @@ import { type Result, ok, tryCatch } from '../../lib/result.ts';
 
 export const searchCodeInputSchema = {
   ...repoCoordsSchema,
-  query: z.string().min(1).max(256),
+  query: z
+    .string()
+    .min(1)
+    .max(256)
+    .refine((q) => !/\b(repo|org|user|in):/i.test(q), {
+      message: 'query must not contain repo:/org:/user:/in: qualifiers (scope is fixed)',
+    }),
   limit: z.number().int().min(1).max(100).default(30),
 };
 

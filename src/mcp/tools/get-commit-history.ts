@@ -78,7 +78,7 @@ export async function getCommitHistoryHandler(
       authorDate: c.commit.author?.date ?? null,
       committer: c.commit.committer?.name ?? null,
       htmlUrl: c.html_url,
-      parentShas: c.parents.map((p) => p.sha),
+      parentShas: c.parents.map((p) => p.sha ?? '').filter((s) => s !== ''),
     })),
   );
 }
