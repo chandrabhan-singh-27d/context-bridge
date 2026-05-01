@@ -1,29 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
+import { type RepoCoords, repoCoordsSchema } from '../../github/schemas.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
 import { type Result, ok, tryCatch } from '../../lib/result.ts';
 
-const slugSegment = z
-  .string()
-  .min(1)
-  .max(100)
-  .regex(
-    /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/,
-    'must be a valid GitHub slug segment (alphanumeric start/end, may contain ._-)',
-  );
-
-export const getRepoInfoInputSchema = {
-  owner: slugSegment,
-  repo: slugSegment,
-};
-
-export interface GetRepoInfoInput {
-  readonly owner: string;
-  readonly repo: string;
-}
+export const getRepoInfoInputSchema = repoCoordsSchema;
+export type GetRepoInfoInput = RepoCoords;
 
 export interface RepoInfo {
   readonly fullName: string;
