@@ -31,7 +31,10 @@ export function createTieredCache(deps: TieredCacheDeps): TieredCache {
       if (hot !== undefined) return hot;
       const cold = sqlite.get(key);
       if (cold === undefined) return undefined;
-      lru.set(key, cold);
+      const remaining = sqlite.getRemainingTtl(key);
+      if (remaining === undefined) return cold;
+      if (remaining === Number.POSITIVE_INFINITY) lru.set(key, cold);
+      else lru.set(key, cold, remaining);
       return cold;
     },
 

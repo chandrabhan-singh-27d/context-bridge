@@ -3,9 +3,13 @@ import { createLruCache } from './lru-cache.ts';
 import { createSqliteCache } from './sqlite-cache.ts';
 import { createTieredCache } from './tiered-cache.ts';
 
-function build() {
-  const lru = createLruCache<string, string>({ maxEntries: 8 });
-  const sqlite = createSqliteCache();
+function build(opts?: { clock?: () => number }) {
+  const lruOpts: { maxEntries: number; clock?: () => number } = { maxEntries: 8 };
+  if (opts?.clock !== undefined) lruOpts.clock = opts.clock;
+  const lru = createLruCache<string, string>(lruOpts);
+  const sqliteR = createSqliteCache(opts);
+  if (!sqliteR.ok) throw new Error('failed to build sqlite cache');
+  const sqlite = sqliteR.value;
   const tiered = createTieredCache({ lru, sqlite });
   return { lru, sqlite, tiered };
 }
@@ -66,6 +70,19 @@ describe('createTieredCache', () => {
     tiered.clear();
     expect(lru.get('a')).toBeUndefined();
     expect(sqlite.get('b')).toBeUndefined();
+    sqlite.close();
+  });
+
+  test('LRU promotion respects SQLite remaining TTL', () => {
+    let t = 1000;
+    const { lru, sqlite, tiered } = build({ clock: () => t });
+    sqlite.set('a', 'cold', 500);
+    t = 1100;
+    expect(tiered.get('a')).toBe('cold');
+    // SQLite expired (t=1600 > 1500); LRU must also have expired since promotion
+    // copied the remaining 400ms TTL.
+    t = 1600;
+    expect(lru.get('a')).toBeUndefined();
     sqlite.close();
   });
 });
