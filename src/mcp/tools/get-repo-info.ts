@@ -1,7 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { buildCacheKey } from '../../cache/cache-key.ts';
+import { TTL_REPO_INFO_MS } from '../../cache/ttl.ts';
+import { withCache } from '../../cache/with-cache.ts';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import { type RepoCoords, repoCoordsSchema } from '../../github/schemas.ts';
+import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
 import { type Result, ok, tryCatch } from '../../lib/result.ts';
@@ -51,13 +55,30 @@ export async function getRepoInfoHandler(
   });
 }
 
-export function registerGetRepoInfo(server: McpServer, client: GitHubClient): void {
+export function registerGetRepoInfo(
+  server: McpServer,
+  client: GitHubClient,
+  cache: TieredCache | null,
+): void {
   server.tool(
     'get_repo_info',
     'Fetch metadata for a GitHub repository (description, default branch, stars, language, archived flag, etc.). Read-only.',
     getRepoInfoInputSchema,
     async (args) => {
-      const r = await getRepoInfoHandler(client, args);
+      const run = (): Promise<Result<RepoInfo, AppError>> => getRepoInfoHandler(client, args);
+      const r =
+        cache === null
+          ? await run()
+          : await withCache(
+              cache,
+              buildCacheKey({
+                endpoint: 'GET /repos/{owner}/{repo}',
+                owner: args.owner,
+                repo: args.repo,
+              }),
+              TTL_REPO_INFO_MS,
+              run,
+            );
       if (!r.ok) {
         return {
           isError: true,

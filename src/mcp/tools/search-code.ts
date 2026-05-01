@@ -1,8 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { buildCacheKey } from '../../cache/cache-key.ts';
+import { TTL_SEARCH_CODE_MS } from '../../cache/ttl.ts';
+import { withCache } from '../../cache/with-cache.ts';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import { repoCoordsSchema } from '../../github/schemas.ts';
+import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
 import { type Result, ok, tryCatch } from '../../lib/result.ts';
@@ -69,13 +73,32 @@ export async function searchCodeHandler(
   });
 }
 
-export function registerSearchCode(server: McpServer, client: GitHubClient): void {
+export function registerSearchCode(
+  server: McpServer,
+  client: GitHubClient,
+  cache: TieredCache | null,
+): void {
   server.tool(
     'search_code',
     'Search code in a GitHub repository by free-text query. Note: GitHub code-search rate limit is lower (30/min) than core API. Read-only.',
     searchCodeInputSchema,
     async (args) => {
-      const r = await searchCodeHandler(client, args);
+      const run = (): Promise<Result<SearchCodeResult, AppError>> =>
+        searchCodeHandler(client, args);
+      const r =
+        cache === null
+          ? await run()
+          : await withCache(
+              cache,
+              buildCacheKey({
+                endpoint: 'GET /search/code',
+                owner: args.owner,
+                repo: args.repo,
+                params: { query: args.query, limit: args.limit },
+              }),
+              TTL_SEARCH_CODE_MS,
+              run,
+            );
       if (!r.ok) {
         return {
           isError: true,

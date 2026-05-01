@@ -1,8 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { buildCacheKey } from '../../cache/cache-key.ts';
+import { TTL_PR_DIFF_MS } from '../../cache/ttl.ts';
+import { withCache } from '../../cache/with-cache.ts';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import { issueNumber, repoCoordsSchema } from '../../github/schemas.ts';
+import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { AppError as AppErr, formatAppError } from '../../lib/errors.ts';
 import { type Result, err, ok, tryCatch } from '../../lib/result.ts';
@@ -60,13 +64,31 @@ export async function getPrDiffHandler(
   return ok({ diff: raw.slice(0, cut), truncated: true, bytes });
 }
 
-export function registerGetPrDiff(server: McpServer, client: GitHubClient): void {
+export function registerGetPrDiff(
+  server: McpServer,
+  client: GitHubClient,
+  cache: TieredCache | null,
+): void {
   server.tool(
     'get_pr_diff',
     'Fetch the unified diff for a pull request. Truncates at maxBytes (default 1 MiB) at the next newline boundary; sets truncated=true when capped. Read-only.',
     getPrDiffInputSchema,
     async (args) => {
-      const r = await getPrDiffHandler(client, args);
+      const run = (): Promise<Result<PrDiffResult, AppError>> => getPrDiffHandler(client, args);
+      const r =
+        cache === null
+          ? await run()
+          : await withCache(
+              cache,
+              buildCacheKey({
+                endpoint: 'GET /repos/{owner}/{repo}/pulls/{pull_number}.diff',
+                owner: args.owner,
+                repo: args.repo,
+                params: { number: args.number, maxBytes: args.maxBytes },
+              }),
+              TTL_PR_DIFF_MS,
+              run,
+            );
       if (!r.ok) {
         return {
           isError: true,

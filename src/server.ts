@@ -1,4 +1,5 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { buildCache } from './cache/build-cache.ts';
 import { loadEnv } from './config/env.ts';
 import { verifyAuth } from './github/auth.ts';
 import { createGitHubClient } from './github/client.ts';
@@ -40,7 +41,14 @@ async function main(): Promise<void> {
       'DEFAULT_REPO not set — repo:// resources (readme/structure/recent-activity) disabled',
     );
   }
-  const server = buildServer({ github, defaultRepo });
+
+  const cacheR = buildCache({ defaultTtlMs: env.CACHE_TTL_SECONDS * 1000 });
+  if (!cacheR.ok) {
+    log.error('cache init failed — running without cache', { error: formatAppError(cacheR.error) });
+  }
+  const cache = cacheR.ok ? cacheR.value : null;
+
+  const server = buildServer({ github, defaultRepo, cache });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   log.info('mcp stdio transport connected');

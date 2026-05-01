@@ -1,7 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { buildCacheKey } from '../../cache/cache-key.ts';
+import { TTL_PULL_REQUEST_MS } from '../../cache/ttl.ts';
+import { withCache } from '../../cache/with-cache.ts';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import { issueNumber, repoCoordsSchema } from '../../github/schemas.ts';
+import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
 import { type Result, ok, tryCatch } from '../../lib/result.ts';
@@ -86,13 +90,32 @@ export async function getPullRequestHandler(
   });
 }
 
-export function registerGetPullRequest(server: McpServer, client: GitHubClient): void {
+export function registerGetPullRequest(
+  server: McpServer,
+  client: GitHubClient,
+  cache: TieredCache | null,
+): void {
   server.tool(
     'get_pull_request',
     'Fetch metadata for a pull request: title, body, state, branches, head SHA, additions/deletions, comment + review counts, labels. Read-only.',
     getPullRequestInputSchema,
     async (args) => {
-      const r = await getPullRequestHandler(client, args);
+      const run = (): Promise<Result<PullRequestSummary, AppError>> =>
+        getPullRequestHandler(client, args);
+      const r =
+        cache === null
+          ? await run()
+          : await withCache(
+              cache,
+              buildCacheKey({
+                endpoint: 'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+                owner: args.owner,
+                repo: args.repo,
+                params: { number: args.number },
+              }),
+              TTL_PULL_REQUEST_MS,
+              run,
+            );
       if (!r.ok) {
         return {
           isError: true,

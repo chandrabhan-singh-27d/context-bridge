@@ -1,8 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { buildCacheKey } from '../../cache/cache-key.ts';
+import { TTL_CI_STATUS_MS } from '../../cache/ttl.ts';
+import { withCache } from '../../cache/with-cache.ts';
 import type { GitHubClient } from '../../github/client.ts';
 import { mapGitHubError } from '../../github/errors.ts';
 import { repoCoordsSchema } from '../../github/schemas.ts';
+import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
 import { type Result, ok, tryCatch } from '../../lib/result.ts';
@@ -81,13 +85,31 @@ export async function getCiStatusHandler(
   });
 }
 
-export function registerGetCiStatus(server: McpServer, client: GitHubClient): void {
+export function registerGetCiStatus(
+  server: McpServer,
+  client: GitHubClient,
+  cache: TieredCache | null,
+): void {
   server.tool(
     'get_ci_status',
     'List recent GitHub Actions workflow runs for a repository. Optional branch filter (branch name only — not SHA or tag). Returns status, conclusion, head SHA, run number, URL. Read-only.',
     getCiStatusInputSchema,
     async (args) => {
-      const r = await getCiStatusHandler(client, args);
+      const run = (): Promise<Result<CiStatusResult, AppError>> => getCiStatusHandler(client, args);
+      const r =
+        cache === null
+          ? await run()
+          : await withCache(
+              cache,
+              buildCacheKey({
+                endpoint: 'GET /repos/{owner}/{repo}/actions/runs',
+                owner: args.owner,
+                repo: args.repo,
+                params: { branch: args.branch, limit: args.limit },
+              }),
+              TTL_CI_STATUS_MS,
+              run,
+            );
       if (!r.ok) {
         return {
           isError: true,
