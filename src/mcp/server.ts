@@ -1,13 +1,26 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { type ToolDeps, registerTools } from './tools/index.ts';
+import type { GitHubClient } from '../github/client.ts';
+import type { RepoCoords } from '../github/schemas.ts';
+import { registerPrompts } from './prompts/index.ts';
+import { registerResources } from './resources/index.ts';
+import { registerTools } from './tools/index.ts';
 
 export const SERVER_INFO = {
   name: 'context-bridge',
   version: '0.0.1',
 } as const;
 
-export function buildServer(deps: ToolDeps): McpServer {
+export interface ServerDeps {
+  readonly github: GitHubClient;
+  readonly defaultRepo: RepoCoords | null;
+}
+
+export function buildServer(deps: ServerDeps): McpServer {
   const server = new McpServer(SERVER_INFO);
-  registerTools(server, deps);
+  registerTools(server, { github: deps.github });
+  registerPrompts(server);
+  if (deps.defaultRepo !== null) {
+    registerResources(server, { github: deps.github, defaultRepo: deps.defaultRepo });
+  }
   return server;
 }
