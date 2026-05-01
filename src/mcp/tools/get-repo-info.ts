@@ -10,7 +10,10 @@ const slugSegment = z
   .string()
   .min(1)
   .max(100)
-  .regex(/^[a-zA-Z0-9._-]+$/, 'must be a valid GitHub slug segment');
+  .regex(
+    /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/,
+    'must be a valid GitHub slug segment (alphanumeric start/end, may contain ._-)',
+  );
 
 export const getRepoInfoInputSchema = {
   owner: slugSegment,

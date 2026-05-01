@@ -67,4 +67,11 @@ describe('formatAppError', () => {
     const e = AppError.internal('oops', { secret: 'hunter2' });
     expect(formatAppError(e)).not.toContain('hunter2');
   });
+
+  test('cause is non-enumerable so JSON.stringify drops it', () => {
+    const e = AppError.internal('oops', { secret: 'hunter2' });
+    expect(JSON.stringify(e)).not.toContain('hunter2');
+    expect(JSON.stringify(e)).not.toContain('cause');
+    expect(e.cause).toEqual({ secret: 'hunter2' });
+  });
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppError } from '../lib/errors.ts';
+import { AppError, type ValidationError } from '../lib/errors.ts';
 import { type Result, err, ok } from '../lib/result.ts';
 
 /**
@@ -36,7 +36,7 @@ export type Env = z.infer<typeof envSchema>;
  */
 export function loadEnv(
   source: Record<string, string | undefined> = process.env,
-): Result<Env, ReturnType<typeof AppError.validation>> {
+): Result<Env, ValidationError> {
   const parsed = envSchema.safeParse(source);
   if (parsed.success) return ok(parsed.data);
 
