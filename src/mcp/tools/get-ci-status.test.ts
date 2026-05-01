@@ -55,7 +55,7 @@ describe('getCiStatusHandler', () => {
     const r = await getCiStatusHandler(client, {
       owner: 'x',
       repo: 'y',
-      ref: undefined,
+      branch: undefined,
       limit: 10,
     });
     expect(r.ok).toBe(true);
@@ -65,7 +65,7 @@ describe('getCiStatusHandler', () => {
     expect(r.value.runs[0]?.runNumber).toBe(42);
   });
 
-  test('passes ref through as branch param', async () => {
+  test('passes branch through as branch param', async () => {
     let capturedBranch: unknown;
     const client = fakeClient(async (params) => {
       capturedBranch = params.branch;
@@ -74,20 +74,20 @@ describe('getCiStatusHandler', () => {
     const r = await getCiStatusHandler(client, {
       owner: 'x',
       repo: 'y',
-      ref: 'feat/x',
+      branch: 'feat/x',
       limit: 5,
     });
     expect(r.ok).toBe(true);
     expect(capturedBranch).toBe('feat/x');
   });
 
-  test('omits branch param when ref undefined', async () => {
+  test('omits branch param when branch undefined', async () => {
     let captured: ListParams | null = null;
     const client = fakeClient(async (params) => {
       captured = params;
       return { data: { total_count: 0, workflow_runs: [] } };
     });
-    await getCiStatusHandler(client, { owner: 'x', repo: 'y', ref: undefined, limit: 5 });
+    await getCiStatusHandler(client, { owner: 'x', repo: 'y', branch: undefined, limit: 5 });
     expect(captured !== null && 'branch' in captured).toBe(false);
   });
 
@@ -101,7 +101,7 @@ describe('getCiStatusHandler', () => {
     const r = await getCiStatusHandler(client, {
       owner: 'x',
       repo: 'y',
-      ref: undefined,
+      branch: undefined,
       limit: 10,
     });
     expect(r.ok).toBe(false);

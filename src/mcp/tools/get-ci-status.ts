@@ -9,14 +9,14 @@ import { type Result, ok, tryCatch } from '../../lib/result.ts';
 
 export const getCiStatusInputSchema = {
   ...repoCoordsSchema,
-  ref: z.string().min(1).max(255).optional(),
+  branch: z.string().min(1).max(255).optional(),
   limit: z.number().int().min(1).max(50).default(10),
 };
 
 export interface GetCiStatusInput {
   readonly owner: string;
   readonly repo: string;
-  readonly ref: string | undefined;
+  readonly branch: string | undefined;
   readonly limit: number;
 }
 
@@ -55,7 +55,7 @@ export async function getCiStatusHandler(
     repo: input.repo,
     per_page: input.limit,
   };
-  if (input.ref !== undefined) params.branch = input.ref;
+  if (input.branch !== undefined) params.branch = input.branch;
   const r = await tryCatch(
     () => client.rest.actions.listWorkflowRunsForRepo(params),
     (e) => mapGitHubError(e, endpoint),
@@ -84,7 +84,7 @@ export async function getCiStatusHandler(
 export function registerGetCiStatus(server: McpServer, client: GitHubClient): void {
   server.tool(
     'get_ci_status',
-    'List recent GitHub Actions workflow runs for a repository. Optional ref filter (branch). Returns status, conclusion, head SHA, run number, URL. Read-only.',
+    'List recent GitHub Actions workflow runs for a repository. Optional branch filter (branch name only — not SHA or tag). Returns status, conclusion, head SHA, run number, URL. Read-only.',
     getCiStatusInputSchema,
     async (args) => {
       const r = await getCiStatusHandler(client, args);
