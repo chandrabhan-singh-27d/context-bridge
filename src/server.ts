@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const env = envR.value;
   const log = createLogger({ level: env.LOG_LEVEL, context: { service: 'context-bridge' } });
 
-  const github = createGitHubClient(env);
+  const github = createGitHubClient({ env, logger: log });
   const auth = await verifyAuth(github);
   if (!auth.ok) {
     log.error('github auth failed', { error: formatAppError(auth.error) });
