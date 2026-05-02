@@ -12,7 +12,7 @@
 
 import { Database } from 'bun:sqlite';
 import { AppError } from '../errors.ts';
-import { type Result, err, ok } from '../result.ts';
+import { err, ok, type Result } from '../result.ts';
 
 export interface SqliteCacheOptions {
   readonly path?: string;

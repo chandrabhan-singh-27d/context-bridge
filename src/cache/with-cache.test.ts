@@ -3,7 +3,7 @@ import { createLruCache } from '../lib/cache/lru-cache.ts';
 import { createSqliteCache } from '../lib/cache/sqlite-cache.ts';
 import { createTieredCache } from '../lib/cache/tiered-cache.ts';
 import { AppError } from '../lib/errors.ts';
-import { type Result, err, ok } from '../lib/result.ts';
+import { err, ok, type Result } from '../lib/result.ts';
 import { withCache } from './with-cache.ts';
 
 function build() {

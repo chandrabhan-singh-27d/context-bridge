@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>context-bridge — companion UI</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>context-bridge</h1>
+      <p class="sub">read-only GitHub access via MCP. Pick a tool, fill args, run.</p>
+      <p id="health" class="health">checking…</p>
+    </header>
+    <main>
+      <section class="panel">
+        <label for="tool">Tool</label>
+        <select id="tool"></select>
+        <p id="tool-desc" class="desc"></p>
+        <label for="args">Arguments (JSON)</label>
+        <textarea id="args" rows="8" spellcheck="false">{}</textarea>
+        <div class="row">
+          <button id="run" type="button">Run</button>
+          <span id="status" class="status"></span>
+        </div>
+      </section>
+      <section class="panel">
+        <label>Result</label>
+        <pre id="result">—</pre>
+      </section>
+    </main>
+    <footer>
+      <a href="https://github.com/chandrabhan-singh-27d/context-bridge" target="_blank" rel="noreferrer noopener">source</a>
+    </footer>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -5,7 +5,7 @@ import { mapGitHubError } from '../../github/errors.ts';
 import type { RepoCoords } from '../../github/schemas.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
-import { type Result, ok, tryCatch } from '../../lib/result.ts';
+import { ok, type Result, tryCatch } from '../../lib/result.ts';
 
 export const STRUCTURE_URI = 'repo://structure';
 

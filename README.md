@@ -18,7 +18,7 @@ Local-first MCP server giving any AI assistant — Claude Code, Cursor, Windsurf
 4. **Validated at the MCP boundary** — Zod schemas on every tool input. Raw input never reaches business logic.
 5. **Cached responses** — in-memory LRU + TTL today; `bun:sqlite` persistent layer (5-min TTL) lands later. Read path: LRU → SQLite → GitHub.
 6. **Rate-limit aware** — `X-RateLimit-Remaining` thresholds + per-IP token bucket guard against burst exhaustion.
-7. **Companion UI** — Hono + Vite + React proves the server end-to-end with a small chat client.
+7. **Companion UI** — Hono server spawns the MCP binary as a child, exposes `/api/tools` and `/api/call`, serves a small static console (vanilla HTML + JS, no build step). Per-IP token bucket guards the bridge from burst abuse.
 
 ---
 
@@ -74,6 +74,21 @@ bun test --watch     # watch mode
 bun run build        # → dist/context-bridge
 ```
 
+### Companion UI
+
+```sh
+bun run ui:dev       # hot-reload Hono + static console at http://127.0.0.1:8787
+bun run ui:start     # one-shot
+```
+
+The companion UI is a second process. It spawns `src/server.ts` as a child, talks newline-delimited JSON-RPC over stdio, and exposes:
+
+- `GET  /api/health` — bridge liveness + bucket size
+- `GET  /api/tools` — proxy of MCP `tools/list`
+- `POST /api/call` — proxy of MCP `tools/call` (`{ name, arguments }`)
+
+A per-IP token bucket (default 30 burst, 1 req/sec sustained) sits in front of `/api/*`. Override via `COMPANION_*` env vars — see `.env.example`.
+
 ---
 
 ## Install in Claude Code
@@ -122,7 +137,7 @@ See `ARCHITECTURE.md` for the dependency graph + invariants.
 | Decision | Why |
 |----------|-----|
 | **Bun over Node** | MCP servers spawn per editor session — Bun cold-starts ~6ms vs Node ~40ms. Native TS, native test runner, native SQLite. Single-binary distribution via `bun build --compile`. Zero native deps in this project = zero compat risk. |
-| **Hono for companion UI** | 4-5x faster than Express on Node. Web-standards (`Request`/`Response`). Runs identically on Bun. Type-safe RPC client to React without codegen. |
+| **Hono for companion UI** | 4-5x faster than Express on Node. Web-standards (`Request`/`Response`). Runs natively on `Bun.serve`. Pairs with a vanilla static frontend — no Vite, no React build, no toolchain. |
 | **stdio transport only** | MCP framing lives on stdout. No HTTP server in the MCP path. Companion UI runs in a separate process. |
 | **Read-only GitHub access** | Token scopes capped to `*:read`. No write tools exposed. Reduces blast radius of token leaks. |
 | **`Result<T, E>` over try/catch** | Explicit error handling. Every handler returns `Result<T, AppError>`. Business logic has zero `try/catch`. |
@@ -165,7 +180,7 @@ See `SECURITY.md` for the full threat model.
 | **Tests** | `bun test` (native) |
 | **Cache** | In-memory LRU+TTL primitive · `bun:sqlite` persistent layer |
 | **Logger** | In-tree structured JSON logger (stderr only, auto-redaction) |
-| **Companion UI** | Hono + Vite + React |
+| **Companion UI** | Hono (Bun.serve) + vanilla HTML/JS (no build step) |
 | **Distribution** | `bun build --compile` → single static binary |
 
 ---
@@ -191,6 +206,19 @@ src/
         ├── index.ts           # registerTools() — fan-out per tool
         ├── ping.ts            # health-check tool
         └── get-repo-info.ts   # repo metadata tool
+
+companion-ui/
+├── server/
+│   ├── index.ts              # entry: Bun.serve + bridge spawn + signal handling
+│   ├── env.ts                # Zod-validated env loader (COMPANION_*)
+│   ├── mcp-bridge.ts         # spawns src/server.ts, JSON-RPC over stdio
+│   ├── token-bucket.ts       # per-IP rate-limit primitive
+│   ├── rate-limit.ts         # Hono middleware
+│   └── routes.ts             # /api/health, /api/tools, /api/call
+└── web/                      # static console (no build step)
+    ├── index.html
+    ├── app.js
+    └── styles.css
 
 .env.example          # required + optional env vars, documented
 biome.json            # lint + format config

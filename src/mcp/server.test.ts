@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitHubClient } from '../github/client.ts';
-import { SERVER_INFO, buildServer } from './server.ts';
+import { buildServer, SERVER_INFO } from './server.ts';
 
 const stubGitHub = {} as unknown as GitHubClient;
 
