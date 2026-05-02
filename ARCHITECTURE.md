@@ -87,8 +87,8 @@ Do NOT add a switch statement somewhere central. Discovery is by file convention
 
 - `bun test` runs every `*.test.ts` under `src/`.
 - Unit tests cover primitives directly (no mocks needed for pure functions).
-- Integration tests for the MCP server use a fake stdio transport (lands with PR #5+).
-- E2E test will boot the real binary and pipe JSON-RPC at it (lands with PR #12).
+- Integration tests for the MCP server use the SDK's in-memory transport.
+- `src/server.e2e.test.ts` spawns `src/server.ts` and pipes real newline-delimited JSON-RPC at it. The unauthenticated case asserts the env loader fails fast; the live case (skipped without `GITHUB_TOKEN`) asserts `initialize` + `tools/list` round-trip.
 
 ## Logging
 
@@ -109,11 +109,13 @@ The persistent layer puts the in-memory LRU in front. Read path: LRU → SQLite 
 
 ## Distribution
 
-Three paths (all land in PR #12):
+Three paths:
 
-1. `bunx context-bridge` — npm-registry install for users with Bun.
-2. `bun build --compile` — single static binary, no Bun required on target.
-3. Source-run — `claude mcp add context-bridge bun run /path/to/src/server.ts` for development.
+1. **Source-run** — `claude mcp add context-bridge bun run /path/to/src/server.ts`. Used during development.
+2. **Compiled binary** — `bun build --compile --target=bun-<os>-<arch>`. Per-target scripts in `package.json` (`build:linux-x64`, `build:darwin-arm64`, `build:darwin-x64`, `build:linux-arm64`, `build:windows-x64`). `build:all` produces every target. Each output is a self-contained ~100MB executable; no Bun, no Node, no native deps required on the host.
+3. **bunx** — `bunx context-bridge`. Pulls from the npm registry. `files` allowlist in `package.json` keeps the published tarball to source + docs (no `dist/`, no test files).
+
+The E2E suite (`src/server.e2e.test.ts`) exercises the binary by spawning `bun run src/server.ts` and piping JSON-RPC at it. The unauthenticated boot test runs in CI on every push; the authenticated `tools/list` test is gated on `GITHUB_TOKEN`.
 
 ## Things that are deliberately NOT here
 

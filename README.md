@@ -71,7 +71,20 @@ bun test --watch     # watch mode
 ### Build (single binary)
 
 ```sh
-bun run build        # → dist/context-bridge
+bun run build              # default: linux-x64 → dist/context-bridge-linux-x64
+bun run build:darwin-arm64 # macOS Apple Silicon
+bun run build:darwin-x64   # macOS Intel
+bun run build:linux-arm64
+bun run build:windows-x64
+bun run build:all          # produce every target
+```
+
+Each binary is self-contained — no Bun, no Node, no `node_modules` required on the target host.
+
+### End-to-end test
+
+```sh
+bun run test:e2e           # GITHUB_TOKEN-gated; the unauth boot test always runs
 ```
 
 ### Companion UI
@@ -93,11 +106,21 @@ A per-IP token bucket (default 30 burst, 1 req/sec sustained) sits in front of `
 
 ## Install in Claude Code
 
+Three install paths:
+
 ```sh
+# 1. Source-run (development — needs Bun on PATH)
 claude mcp add context-bridge bun run /path/to/context-bridge/src/server.ts
+
+# 2. Compiled binary (no Bun required on the target machine)
+bun run build:darwin-arm64    # or whichever target matches your OS
+claude mcp add context-bridge /path/to/context-bridge/dist/context-bridge-darwin-arm64
+
+# 3. bunx (once published)
+claude mcp add context-bridge bunx context-bridge
 ```
 
-Then in any Claude Code session, the `get_repo_info`, `search_issues`, etc. tools are available.
+Each path produces the same MCP server. Point your client at any of them. In a Claude Code session, `get_repo_info`, `search_issues`, etc. become available.
 
 ---
 
