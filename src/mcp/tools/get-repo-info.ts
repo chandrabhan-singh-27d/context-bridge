@@ -8,7 +8,7 @@ import { type RepoCoords, repoCoordsSchema } from '../../github/schemas.ts';
 import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { formatAppError } from '../../lib/errors.ts';
-import { type Result, ok, tryCatch } from '../../lib/result.ts';
+import { ok, type Result, tryCatch } from '../../lib/result.ts';
 
 export const getRepoInfoInputSchema = repoCoordsSchema;
 export type GetRepoInfoInput = RepoCoords;

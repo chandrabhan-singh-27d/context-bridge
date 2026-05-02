@@ -40,14 +40,19 @@ src/lib/logging/logger.ts        ← structured logger (stderr only)
 src/lib/cache/lru-cache.ts       ← LRU + TTL cache primitive
 ```
 
-Future layers (per PR roadmap):
+Sibling process (in-tree but separate runtime):
 
 ```
-src/github/                      ← PR #5: Octokit client + repository pattern
-src/cache/                       ← PR #9: bun:sqlite persistent cache (uses LruCache as front)
-src/rate-limit/                  ← PR #10: token-bucket per-IP + GitHub X-RateLimit handling
-companion-ui/                    ← PR #11: separate Hono + Vite + React app
+companion-ui/server/index.ts            ← Bun.serve entry (Hono app)
+  companion-ui/server/routes.ts         ← /api/health, /api/tools, /api/call
+  companion-ui/server/mcp-bridge.ts     ← spawns src/server.ts, JSON-RPC over stdio
+  companion-ui/server/token-bucket.ts   ← per-IP burst primitive
+  companion-ui/server/rate-limit.ts     ← Hono middleware over the bucket
+  companion-ui/server/env.ts            ← COMPANION_* Zod loader (separate from MCP env)
+  companion-ui/web/                     ← static HTML/JS console served by Hono
 ```
+
+The companion process re-uses `src/lib/result.ts`, `src/lib/errors.ts`, and `src/lib/logging/logger.ts` directly. It never imports from `src/mcp/**` — communication is stdio + JSON-RPC, exactly like a third-party client.
 
 ## Key invariants
 

@@ -8,9 +8,9 @@
 
 import { createLruCache } from '../lib/cache/lru-cache.ts';
 import { createSqliteCache } from '../lib/cache/sqlite-cache.ts';
-import { type TieredCache, createTieredCache } from '../lib/cache/tiered-cache.ts';
+import { createTieredCache, type TieredCache } from '../lib/cache/tiered-cache.ts';
 import type { AppError } from '../lib/errors.ts';
-import { type Result, ok } from '../lib/result.ts';
+import { ok, type Result } from '../lib/result.ts';
 
 export interface BuildCacheOptions {
   readonly path?: string;

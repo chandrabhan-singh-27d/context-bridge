@@ -10,7 +10,7 @@
 
 import type { TieredCache } from '../lib/cache/tiered-cache.ts';
 import type { AppError } from '../lib/errors.ts';
-import { type Result, ok } from '../lib/result.ts';
+import { ok, type Result } from '../lib/result.ts';
 
 export async function withCache<T>(
   cache: TieredCache,

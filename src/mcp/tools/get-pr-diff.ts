@@ -9,7 +9,7 @@ import { issueNumber, repoCoordsSchema } from '../../github/schemas.ts';
 import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { AppError } from '../../lib/errors.ts';
 import { AppError as AppErr, formatAppError } from '../../lib/errors.ts';
-import { type Result, err, ok, tryCatch } from '../../lib/result.ts';
+import { err, ok, type Result, tryCatch } from '../../lib/result.ts';
 
 const MAX_DIFF_BYTES = 1_048_576; // 1 MiB hard cap to keep MCP responses tractable
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AppError, type ValidationError } from '../lib/errors.ts';
-import { type Result, err, ok } from '../lib/result.ts';
+import { err, ok, type Result } from '../lib/result.ts';
 
 /**
  * Environment loader. Single source of truth for runtime configuration.

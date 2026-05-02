@@ -1,5 +1,5 @@
 import type { AppError } from '../lib/errors.ts';
-import { type Result, ok, tryCatch } from '../lib/result.ts';
+import { ok, type Result, tryCatch } from '../lib/result.ts';
 import type { GitHubClient } from './client.ts';
 import { mapGitHubError } from './errors.ts';
 

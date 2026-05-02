@@ -20,6 +20,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "companion-ui/server/**/*"],
+  "exclude": ["node_modules", "dist", "companion-ui/web/**/*"]
 }
