@@ -10,16 +10,33 @@
   "bin": {
     "context-bridge": "./src/server.ts"
   },
+  "files": [
+    "src",
+    "companion-ui",
+    "README.md",
+    "LICENSE",
+    "ARCHITECTURE.md",
+    "SECURITY.md",
+    ".env.example"
+  ],
   "scripts": {
     "dev": "bun --hot run src/server.ts",
     "start": "bun run src/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "build": "bun build --compile --target=bun-linux-x64 src/server.ts --outfile dist/context-bridge",
+    "test:e2e": "GITHUB_TOKEN=${GITHUB_TOKEN:-} bun test src/server.e2e.test.ts",
+    "build": "bun run build:linux-x64",
+    "build:linux-x64": "bun build --compile --target=bun-linux-x64 src/server.ts --outfile dist/context-bridge-linux-x64",
+    "build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/server.ts --outfile dist/context-bridge-linux-arm64",
+    "build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/server.ts --outfile dist/context-bridge-darwin-x64",
+    "build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/server.ts --outfile dist/context-bridge-darwin-arm64",
+    "build:windows-x64": "bun build --compile --target=bun-windows-x64 src/server.ts --outfile dist/context-bridge-windows-x64.exe",
+    "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64",
     "ui:dev": "bun --hot run companion-ui/server/index.ts",
     "ui:start": "bun run companion-ui/server/index.ts",
     "lint": "biome check src companion-ui/server",
-    "format": "biome format --write src companion-ui/server"
+    "format": "biome format --write src companion-ui/server",
+    "prepublishOnly": "bun run typecheck && bun run lint && bun test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
