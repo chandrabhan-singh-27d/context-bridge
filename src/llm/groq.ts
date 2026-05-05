@@ -20,6 +20,37 @@ interface GroqApiResponse {
   };
 }
 
+function mapHttpStatus(status: number, message: string): AppError {
+  switch (status) {
+    case 401:
+      return AppError.auth('invalid_token', message || 'unauthorized');
+    case 429:
+      return AppError.rateLimit(0, 0, message || 'rate limited');
+    default:
+      return AppError.githubApi(status, message || 'groq api error', ENDPOINT);
+  }
+}
+
+function toChatResponse(
+  parsed: GroqApiResponse,
+  fallbackModel: string,
+): Result<ChatResponse, AppError> {
+  const content = parsed.choices?.[0]?.message?.content;
+  if (typeof content !== 'string') {
+    return err(AppError.internal('groq response missing choices[0].message.content'));
+  }
+  const u = parsed.usage;
+  const base: ChatResponse = { content, model: parsed.model ?? fallbackModel };
+  return ok(
+    u === undefined
+      ? base
+      : {
+          ...base,
+          usage: { promptTokens: u.prompt_tokens ?? 0, completionTokens: u.completion_tokens ?? 0 },
+        },
+  );
+}
+
 export function createGroqProvider(deps: GroqAdapterDeps): LlmProvider {
   const model = deps.model ?? DEFAULT_MODEL;
   const doFetch = deps.fetchImpl ?? fetch;
@@ -28,61 +59,37 @@ export function createGroqProvider(deps: GroqAdapterDeps): LlmProvider {
     name: 'groq',
     model,
     async chat(req: ChatRequest): Promise<Result<ChatResponse, AppError>> {
-      const body = {
+      const body = JSON.stringify({
         model,
         messages: req.messages,
         max_tokens: req.maxTokens,
         temperature: req.temperature,
+      });
+      const headers = {
+        authorization: `Bearer ${deps.apiKey}`,
+        'content-type': 'application/json',
       };
-
-      const fetchOpts: RequestInit = {
+      const init: RequestInit = {
         method: 'POST',
-        headers: {
-          authorization: `Bearer ${deps.apiKey}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        headers,
+        body,
+        ...(req.signal && { signal: req.signal }),
       };
-      if (req.signal !== undefined) fetchOpts.signal = req.signal;
 
-      const r = await tryCatch(
-        () => doFetch(ENDPOINT, fetchOpts),
+      const sent = await tryCatch(
+        () => doFetch(ENDPOINT, init),
         (e) => AppError.internal(`groq request failed: ${(e as Error)?.message ?? 'unknown'}`, e),
       );
-      if (!r.ok) return r;
-      const res = r.value;
+      if (!sent.ok) return sent;
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        if (res.status === 401) return err(AppError.auth('invalid_token', text || 'unauthorized'));
-        if (res.status === 429) return err(AppError.rateLimit(0, 0, text || 'rate limited'));
-        return err(AppError.githubApi(res.status, text || 'groq api error', ENDPOINT));
-      }
+      const res = sent.value;
+      if (!res.ok) return err(mapHttpStatus(res.status, await res.text().catch(() => '')));
 
       const parsed = await tryCatch(
         () => res.json() as Promise<GroqApiResponse>,
         (e) => AppError.internal('groq response not json', e),
       );
-      if (!parsed.ok) return parsed;
-
-      const content = parsed.value.choices?.[0]?.message?.content;
-      if (typeof content !== 'string') {
-        return err(AppError.internal('groq response missing choices[0].message.content'));
-      }
-
-      const usage = parsed.value.usage;
-      const out: ChatResponse =
-        usage === undefined
-          ? { content, model: parsed.value.model ?? model }
-          : {
-              content,
-              model: parsed.value.model ?? model,
-              usage: {
-                promptTokens: usage.prompt_tokens ?? 0,
-                completionTokens: usage.completion_tokens ?? 0,
-              },
-            };
-      return ok(out);
+      return parsed.ok ? toChatResponse(parsed.value, model) : parsed;
     },
   };
 }
