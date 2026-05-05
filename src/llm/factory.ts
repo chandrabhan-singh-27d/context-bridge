@@ -1,5 +1,7 @@
 import type { Env } from '../config/env.ts';
+import { createAnthropicProvider } from './anthropic.ts';
 import { createGroqProvider } from './groq.ts';
+import { createOpenAiProvider } from './openai.ts';
 import type { LlmProvider } from './provider.ts';
 
 /**
@@ -17,11 +19,14 @@ export function buildProvider(
   const apiKey = env.LLM_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) return null;
 
+  const overrideModel = env.LLM_MODEL !== undefined ? { model: env.LLM_MODEL } : {};
+
   switch (env.LLM_PROVIDER) {
     case 'groq':
-      return createGroqProvider({
-        apiKey,
-        ...(env.LLM_MODEL !== undefined ? { model: env.LLM_MODEL } : {}),
-      });
+      return createGroqProvider({ apiKey, ...overrideModel });
+    case 'openai':
+      return createOpenAiProvider({ apiKey, ...overrideModel });
+    case 'anthropic':
+      return createAnthropicProvider({ apiKey, ...overrideModel });
   }
 }
