@@ -15,6 +15,7 @@ import { registerLabelIssue } from './label-issue.ts';
 import { registerListReviewComments } from './list-review-comments.ts';
 import { registerOpenPr } from './open-pr.ts';
 import { registerPing } from './ping.ts';
+import { registerProposeFix } from './propose-fix.ts';
 import { registerSearchCode } from './search-code.ts';
 import { registerSearchIssues } from './search-issues.ts';
 import { registerSummarizeIssue } from './summarize-issue.ts';
@@ -50,5 +51,8 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
   if (deps.llm !== null) {
     registerSummarizeIssue(server, deps.github, deps.llm);
     registerTriagePr(server, deps.github, deps.llm);
+    if (deps.writesEnabled) {
+      registerProposeFix(server, deps.github, deps.llm);
+    }
   }
 }

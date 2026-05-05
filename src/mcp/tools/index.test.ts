@@ -27,6 +27,7 @@ const WRITE_TOOLS = [
 ];
 
 const LLM_TOOLS = ['summarize_issue', 'triage_pr'];
+const COMPOSITE_TOOLS = ['propose_fix'];
 
 function recordingServer(): { server: McpServer; toolNames: string[] } {
   const toolNames: string[] = [];
@@ -55,7 +56,7 @@ describe('registerTools', () => {
       llm: null,
     });
     for (const name of READ_TOOLS) expect(toolNames).toContain(name);
-    for (const name of [...WRITE_TOOLS, ...LLM_TOOLS]) {
+    for (const name of [...WRITE_TOOLS, ...LLM_TOOLS, ...COMPOSITE_TOOLS]) {
       expect(toolNames).not.toContain(name);
     }
   });
@@ -69,10 +70,10 @@ describe('registerTools', () => {
       llm: null,
     });
     for (const name of [...READ_TOOLS, ...WRITE_TOOLS]) expect(toolNames).toContain(name);
-    for (const name of LLM_TOOLS) expect(toolNames).not.toContain(name);
+    for (const name of [...LLM_TOOLS, ...COMPOSITE_TOOLS]) expect(toolNames).not.toContain(name);
   });
 
-  test('llm tools registered when provider non-null', () => {
+  test('llm tools registered when provider non-null but composite gated on writes', () => {
     const { server, toolNames } = recordingServer();
     registerTools(server, {
       github: stubClient,
@@ -81,10 +82,10 @@ describe('registerTools', () => {
       llm: stubLlm,
     });
     for (const name of [...READ_TOOLS, ...LLM_TOOLS]) expect(toolNames).toContain(name);
-    for (const name of WRITE_TOOLS) expect(toolNames).not.toContain(name);
+    for (const name of [...WRITE_TOOLS, ...COMPOSITE_TOOLS]) expect(toolNames).not.toContain(name);
   });
 
-  test('all three groups when writes + llm both on', () => {
+  test('composite tools registered only when writes + llm both on', () => {
     const { server, toolNames } = recordingServer();
     registerTools(server, {
       github: stubClient,
@@ -92,7 +93,7 @@ describe('registerTools', () => {
       writesEnabled: true,
       llm: stubLlm,
     });
-    for (const name of [...READ_TOOLS, ...WRITE_TOOLS, ...LLM_TOOLS]) {
+    for (const name of [...READ_TOOLS, ...WRITE_TOOLS, ...LLM_TOOLS, ...COMPOSITE_TOOLS]) {
       expect(toolNames).toContain(name);
     }
   });
