@@ -84,10 +84,16 @@ bun run build:all          # produce every target
 
 Each binary is self-contained — no Bun, no Node, no `node_modules` required on the target host.
 
-### End-to-end test
+### End-to-end tests
 
 ```sh
 bun run test:e2e           # GITHUB_TOKEN-gated; the unauth boot test always runs
+bun run test:e2e:write     # GITHUB_TOKEN + E2E_WRITE_REPO-gated; round-trips
+                           # create_branch → commit_files → open_pr →
+                           # comment_on_pr → label_issue against a sandbox.
+                           # NEVER set E2E_WRITE_REPO to a production repo.
+                           # Cleanup runs by default; opt out with
+                           # E2E_WRITE_NO_CLEANUP=true.
 ```
 
 ### Companion UI

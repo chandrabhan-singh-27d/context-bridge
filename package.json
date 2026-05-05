@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:e2e": "GITHUB_TOKEN=${GITHUB_TOKEN:-} bun test src/server.e2e.test.ts",
+    "test:e2e:write": "GITHUB_TOKEN=${GITHUB_TOKEN:-} E2E_WRITE_REPO=${E2E_WRITE_REPO:-} bun test src/server.write.e2e.test.ts",
     "build": "bun run build:linux-x64",
     "build:linux-x64": "bun build --compile --target=bun-linux-x64 src/server.ts --outfile dist/context-bridge-linux-x64",
     "build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/server.ts --outfile dist/context-bridge-linux-arm64",
