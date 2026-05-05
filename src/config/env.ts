@@ -14,10 +14,15 @@ import { err, ok, type Result } from '../lib/result.ts';
  */
 
 const LogLevel = z.enum(['debug', 'info', 'warn', 'error']);
+const LlmProviderName = z.enum(['groq']);
 
 const RepoSlug = z
   .string()
   .regex(/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/, 'must be in "owner/repo" form');
+
+const boolish = z
+  .union([z.boolean(), z.string()])
+  .transform((v) => (typeof v === 'boolean' ? v : v.toLowerCase() === 'true'));
 
 const envSchema = z.object({
   GITHUB_TOKEN: z
@@ -26,6 +31,10 @@ const envSchema = z.object({
   DEFAULT_REPO: RepoSlug.optional(),
   CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(86_400).default(300),
   LOG_LEVEL: LogLevel.default('info'),
+  WRITES_ENABLED: boolish.default(false),
+  LLM_PROVIDER: LlmProviderName.default('groq'),
+  LLM_API_KEY: z.string().optional(),
+  LLM_MODEL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

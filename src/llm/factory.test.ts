@@ -1,0 +1,28 @@
+import { describe, expect, test } from 'bun:test';
+import { buildProvider } from './factory.ts';
+
+describe('buildProvider', () => {
+  test('returns null when LLM_API_KEY absent', () => {
+    expect(buildProvider({ LLM_PROVIDER: 'groq' })).toBeNull();
+  });
+
+  test('returns null when LLM_API_KEY empty', () => {
+    expect(buildProvider({ LLM_PROVIDER: 'groq', LLM_API_KEY: '' })).toBeNull();
+  });
+
+  test('returns groq adapter when configured', () => {
+    const p = buildProvider({ LLM_PROVIDER: 'groq', LLM_API_KEY: 'k' });
+    expect(p).not.toBeNull();
+    expect(p?.name).toBe('groq');
+  });
+
+  test('honors LLM_MODEL override', () => {
+    const p = buildProvider({ LLM_PROVIDER: 'groq', LLM_API_KEY: 'k', LLM_MODEL: 'custom' });
+    expect(p?.model).toBe('custom');
+  });
+
+  test('uses default model when LLM_MODEL absent', () => {
+    const p = buildProvider({ LLM_PROVIDER: 'groq', LLM_API_KEY: 'k' });
+    expect(p?.model).toBeTruthy();
+  });
+});
