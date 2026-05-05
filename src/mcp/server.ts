@@ -15,11 +15,16 @@ export interface ServerDeps {
   readonly github: GitHubClient;
   readonly defaultRepo: RepoCoords | null;
   readonly cache: TieredCache | null;
+  readonly writesEnabled: boolean;
 }
 
 export function buildServer(deps: ServerDeps): McpServer {
   const server = new McpServer(SERVER_INFO);
-  registerTools(server, { github: deps.github, cache: deps.cache });
+  registerTools(server, {
+    github: deps.github,
+    cache: deps.cache,
+    writesEnabled: deps.writesEnabled,
+  });
   registerPrompts(server);
   if (deps.defaultRepo !== null) {
     registerResources(server, { github: deps.github, defaultRepo: deps.defaultRepo });
