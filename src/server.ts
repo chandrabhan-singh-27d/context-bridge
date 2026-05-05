@@ -6,6 +6,7 @@ import { createGitHubClient } from './github/client.ts';
 import type { RepoCoords } from './github/schemas.ts';
 import { formatAppError } from './lib/errors.ts';
 import { createLogger } from './lib/logging/logger.ts';
+import { buildProvider } from './llm/factory.ts';
 import { buildServer } from './mcp/server.ts';
 
 function parseDefaultRepo(slug: string | undefined): RepoCoords | null {
@@ -57,7 +58,18 @@ async function main(): Promise<void> {
   }
   const cache = cacheR.ok ? cacheR.value : null;
 
-  const server = buildServer({ github, defaultRepo, cache, writesEnabled: env.WRITES_ENABLED });
+  const llm = buildProvider(env);
+  if (llm !== null) {
+    log.info('llm provider configured', { provider: llm.name, model: llm.model });
+  }
+
+  const server = buildServer({
+    github,
+    defaultRepo,
+    cache,
+    writesEnabled: env.WRITES_ENABLED,
+    llm,
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   log.info('mcp stdio transport connected');

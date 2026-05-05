@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GitHubClient } from '../github/client.ts';
 import type { RepoCoords } from '../github/schemas.ts';
 import type { TieredCache } from '../lib/cache/tiered-cache.ts';
+import type { LlmProvider } from '../llm/provider.ts';
 import { registerPrompts } from './prompts/index.ts';
 import { registerResources } from './resources/index.ts';
 import { registerTools } from './tools/index.ts';
@@ -16,6 +17,7 @@ export interface ServerDeps {
   readonly defaultRepo: RepoCoords | null;
   readonly cache: TieredCache | null;
   readonly writesEnabled: boolean;
+  readonly llm: LlmProvider | null;
 }
 
 export function buildServer(deps: ServerDeps): McpServer {
@@ -24,6 +26,7 @@ export function buildServer(deps: ServerDeps): McpServer {
     github: deps.github,
     cache: deps.cache,
     writesEnabled: deps.writesEnabled,
+    llm: deps.llm,
   });
   registerPrompts(server);
   if (deps.defaultRepo !== null) {

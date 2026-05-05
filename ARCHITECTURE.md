@@ -37,10 +37,12 @@ src/config/env.ts                ← Zod env loader, returns Result
   src/lib/result.ts              ← Result<T, E> primitive
   src/lib/errors.ts              ← AppError discriminated union
 
-src/llm/                         ← vendor-agnostic LLM port
+src/llm/                         ← vendor-agnostic LLM port + helpers
   src/llm/provider.ts            ← LlmProvider interface + Chat types
   src/llm/groq.ts                ← Groq adapter (default)
   src/llm/factory.ts             ← buildProvider(env) → LlmProvider | null
+  src/llm/prompts.ts             ← pure prompt builders (issue/PR triage)
+  src/llm/parse.ts               ← LLM JSON response parser + Zod validator
 
 src/lib/logging/logger.ts        ← structured logger (stderr only)
 src/lib/cache/lru-cache.ts       ← LRU + TTL cache primitive
@@ -135,6 +137,17 @@ The E2E suite (`src/server.e2e.test.ts`) exercises the binary by spawning `bun r
 When `WRITES_ENABLED=true`, the server registers six write tools: `comment_on_issue`, `comment_on_pr`, `label_issue`, `create_branch`, `commit_files`, `open_pr`. The agent uses these to flag issues (label + comment), raise PRs, and indirectly close issues via `Closes #N` in the PR body — a human merges, GitHub auto-closes.
 
 `commit_files` rejects the default branch as a target. `open_pr` rejects `head === base` and validates the head ref exists. `create_branch` defaults to default-branch HEAD as the source. There is no path in the codebase that closes/merges PRs, force-pushes, deletes refs, or modifies repo settings — and no token scope on the read-only path can ever expose write tools (registration is gated on `env.WRITES_ENABLED` before scope is read).
+
+## LLM consumer tools
+
+Two tools depend on the LLM port: `summarize_issue` and `triage_pr`. Both:
+
+1. Fetch the GitHub artefact (issue + comments, or PR + diff).
+2. Hand it to a pure prompt builder in `src/llm/prompts.ts` that wraps untrusted user content in `<ISSUE>`/`<PR>` delimiters — the system prompt is immutable and instructs the LLM to treat anything inside the delimiters as data, not directives.
+3. Send the prompt via `LlmProvider.chat()`.
+4. Parse the response through `parseLlmJson` against a Zod schema. Bad JSON or shape mismatches surface as `INTERNAL_ERROR`.
+
+Tools are registered only when `buildProvider(env)` returns non-null (i.e. `LLM_API_KEY` is set). Same fail-closed pattern as the write surface.
 
 ## How to add a new LLM provider
 

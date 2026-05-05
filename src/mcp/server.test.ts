@@ -16,6 +16,7 @@ describe('buildServer', () => {
       defaultRepo: null,
       cache: null,
       writesEnabled: false,
+      llm: null,
     });
     expect(server).toBeDefined();
     expect(typeof server.connect).toBe('function');

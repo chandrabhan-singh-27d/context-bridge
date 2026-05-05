@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GitHubClient } from '../../github/client.ts';
 import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
+import type { LlmProvider } from '../../llm/provider.ts';
 import { registerCommentOnIssue } from './comment-on-issue.ts';
 import { registerCommentOnPr } from './comment-on-pr.ts';
 import { registerCommitFiles } from './commit-files.ts';
@@ -16,11 +17,14 @@ import { registerOpenPr } from './open-pr.ts';
 import { registerPing } from './ping.ts';
 import { registerSearchCode } from './search-code.ts';
 import { registerSearchIssues } from './search-issues.ts';
+import { registerSummarizeIssue } from './summarize-issue.ts';
+import { registerTriagePr } from './triage-pr.ts';
 
 export interface ToolDeps {
   readonly github: GitHubClient;
   readonly cache: TieredCache | null;
   readonly writesEnabled: boolean;
+  readonly llm: LlmProvider | null;
 }
 
 export function registerTools(server: McpServer, deps: ToolDeps): void {
@@ -41,5 +45,10 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
     registerCreateBranch(server, deps.github);
     registerCommitFiles(server, deps.github);
     registerOpenPr(server, deps.github);
+  }
+
+  if (deps.llm !== null) {
+    registerSummarizeIssue(server, deps.github, deps.llm);
+    registerTriagePr(server, deps.github, deps.llm);
   }
 }
