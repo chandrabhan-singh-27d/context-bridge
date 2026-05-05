@@ -11,7 +11,12 @@ describe('buildServer', () => {
   });
 
   test('returns a usable McpServer instance', () => {
-    const server = buildServer({ github: stubGitHub, defaultRepo: null, cache: null });
+    const server = buildServer({
+      github: stubGitHub,
+      defaultRepo: null,
+      cache: null,
+      writesEnabled: false,
+    });
     expect(server).toBeDefined();
     expect(typeof server.connect).toBe('function');
   });

@@ -1,7 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { buildCache } from './cache/build-cache.ts';
 import { loadEnv } from './config/env.ts';
-import { verifyAuth } from './github/auth.ts';
+import { assertWriteScopes, verifyAuth } from './github/auth.ts';
 import { createGitHubClient } from './github/client.ts';
 import type { RepoCoords } from './github/schemas.ts';
 import { formatAppError } from './lib/errors.ts';
@@ -33,7 +33,16 @@ async function main(): Promise<void> {
     log.error('github auth failed', { error: formatAppError(auth.error) });
     process.exit(1);
   }
-  log.info('github authenticated', { login: auth.value.login });
+  log.info('github authenticated', { login: auth.value.login, scopes: auth.value.scopes });
+
+  if (env.WRITES_ENABLED) {
+    const scopeCheck = assertWriteScopes(auth.value.scopes);
+    if (!scopeCheck.ok) {
+      log.error('write scope assertion failed', { error: formatAppError(scopeCheck.error) });
+      process.exit(1);
+    }
+    log.info('write tools enabled', { scopes: auth.value.scopes });
+  }
 
   const defaultRepo = parseDefaultRepo(env.DEFAULT_REPO);
   if (defaultRepo === null) {
@@ -48,7 +57,7 @@ async function main(): Promise<void> {
   }
   const cache = cacheR.ok ? cacheR.value : null;
 
-  const server = buildServer({ github, defaultRepo, cache });
+  const server = buildServer({ github, defaultRepo, cache, writesEnabled: env.WRITES_ENABLED });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   log.info('mcp stdio transport connected');
