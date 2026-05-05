@@ -23,14 +23,14 @@ function parseScopesHeader(headers: Record<string, unknown> | undefined): Readon
 }
 
 export async function verifyAuth(client: GitHubClient): Promise<Result<AuthIdentity, AppError>> {
-  const r = await tryCatch(
+  const fetched = await tryCatch(
     () => client.rest.users.getAuthenticated(),
-    (e) => mapGitHubError(e, 'GET /user'),
+    (cause) => mapGitHubError(cause, 'GET /user'),
   );
-  if (!r.ok) return r;
-  const headers = (r.value as { headers?: Record<string, unknown> }).headers;
+  if (!fetched.ok) return fetched;
+  const headers = (fetched.value as { headers?: Record<string, unknown> }).headers;
   return ok({
-    login: r.value.data.login,
+    login: fetched.value.data.login,
     scopes: parseScopesHeader(headers),
   });
 }

@@ -35,104 +35,104 @@ export async function commitFilesHandler(
   }
 
   const repoEndpoint = `GET /repos/${input.owner}/${input.repo}`;
-  const repoRes = await tryCatch(
+  const repoMeta = await tryCatch(
     () => client.rest.repos.get({ owner: input.owner, repo: input.repo }),
-    (e) => mapGitHubError(e, repoEndpoint),
+    (cause) => mapGitHubError(cause, repoEndpoint),
   );
-  if (!repoRes.ok) return repoRes;
-  if (repoRes.value.data.default_branch === input.branch) {
+  if (!repoMeta.ok) return repoMeta;
+  if (repoMeta.value.data.default_branch === input.branch) {
     return err(
       AppError.validation('branch', 'refusing to commit to default branch (HITL-only target)'),
     );
   }
 
-  const refEndpoint = `GET /repos/${input.owner}/${input.repo}/git/ref/heads/${input.branch}`;
-  const refRes = await tryCatch(
+  const branchRefEndpoint = `GET /repos/${input.owner}/${input.repo}/git/ref/heads/${input.branch}`;
+  const branchRef = await tryCatch(
     () =>
       client.rest.git.getRef({
         owner: input.owner,
         repo: input.repo,
         ref: `heads/${input.branch}`,
       }),
-    (e) => mapGitHubError(e, refEndpoint),
+    (cause) => mapGitHubError(cause, branchRefEndpoint),
   );
-  if (!refRes.ok) return refRes;
-  const parentSha = refRes.value.data.object.sha;
+  if (!branchRef.ok) return branchRef;
+  const parentSha = branchRef.value.data.object.sha;
 
   const parentCommitEndpoint = `GET /repos/${input.owner}/${input.repo}/git/commits/${parentSha}`;
   const parentCommit = await tryCatch(
     () =>
       client.rest.git.getCommit({ owner: input.owner, repo: input.repo, commit_sha: parentSha }),
-    (e) => mapGitHubError(e, parentCommitEndpoint),
+    (cause) => mapGitHubError(cause, parentCommitEndpoint),
   );
   if (!parentCommit.ok) return parentCommit;
   const baseTreeSha = parentCommit.value.data.tree.sha;
 
-  const blobs: Array<{ path: string; sha: string }> = [];
-  for (const f of input.files) {
+  const uploadedBlobs: Array<{ path: string; sha: string }> = [];
+  for (const file of input.files) {
     const blobEndpoint = `POST /repos/${input.owner}/${input.repo}/git/blobs`;
-    const blob = await tryCatch(
+    const uploaded = await tryCatch(
       () =>
         client.rest.git.createBlob({
           owner: input.owner,
           repo: input.repo,
-          content: Buffer.from(f.content, 'utf8').toString('base64'),
+          content: Buffer.from(file.content, 'utf8').toString('base64'),
           encoding: 'base64',
         }),
-      (e) => mapGitHubError(e, blobEndpoint),
+      (cause) => mapGitHubError(cause, blobEndpoint),
     );
-    if (!blob.ok) return blob;
-    blobs.push({ path: f.path, sha: blob.value.data.sha });
+    if (!uploaded.ok) return uploaded;
+    uploadedBlobs.push({ path: file.path, sha: uploaded.value.data.sha });
   }
 
   const treeEndpoint = `POST /repos/${input.owner}/${input.repo}/git/trees`;
-  const tree = await tryCatch(
+  const newTree = await tryCatch(
     () =>
       client.rest.git.createTree({
         owner: input.owner,
         repo: input.repo,
         base_tree: baseTreeSha,
-        tree: blobs.map((b) => ({
-          path: b.path,
+        tree: uploadedBlobs.map((blob) => ({
+          path: blob.path,
           mode: '100644' as const,
           type: 'blob' as const,
-          sha: b.sha,
+          sha: blob.sha,
         })),
       }),
-    (e) => mapGitHubError(e, treeEndpoint),
+    (cause) => mapGitHubError(cause, treeEndpoint),
   );
-  if (!tree.ok) return tree;
+  if (!newTree.ok) return newTree;
 
   const commitEndpoint = `POST /repos/${input.owner}/${input.repo}/git/commits`;
-  const commit = await tryCatch(
+  const newCommit = await tryCatch(
     () =>
       client.rest.git.createCommit({
         owner: input.owner,
         repo: input.repo,
         message: input.message,
-        tree: tree.value.data.sha,
+        tree: newTree.value.data.sha,
         parents: [parentSha],
       }),
-    (e) => mapGitHubError(e, commitEndpoint),
+    (cause) => mapGitHubError(cause, commitEndpoint),
   );
-  if (!commit.ok) return commit;
+  if (!newCommit.ok) return newCommit;
 
   const updateEndpoint = `PATCH /repos/${input.owner}/${input.repo}/git/refs/heads/${input.branch}`;
-  const updated = await tryCatch(
+  const advanced = await tryCatch(
     () =>
       client.rest.git.updateRef({
         owner: input.owner,
         repo: input.repo,
         ref: `heads/${input.branch}`,
-        sha: commit.value.data.sha,
+        sha: newCommit.value.data.sha,
       }),
-    (e) => mapGitHubError(e, updateEndpoint),
+    (cause) => mapGitHubError(cause, updateEndpoint),
   );
-  if (!updated.ok) return updated;
+  if (!advanced.ok) return advanced;
 
   return ok({
-    commitSha: commit.value.data.sha,
-    htmlUrl: commit.value.data.html_url,
+    commitSha: newCommit.value.data.sha,
+    htmlUrl: newCommit.value.data.html_url,
   });
 }
 
@@ -142,11 +142,11 @@ export function registerCommitFiles(server: McpServer, client: GitHubClient): vo
     'Atomically commit one or more files to a non-default branch via the Git Data API. Write surface — requires WRITES_ENABLED.',
     commitFilesInputSchema,
     async (args) => {
-      const r = await commitFilesHandler(client, args);
-      if (!r.ok) {
-        return { isError: true, content: [{ type: 'text', text: formatAppError(r.error) }] };
+      const outcome = await commitFilesHandler(client, args);
+      if (!outcome.ok) {
+        return { isError: true, content: [{ type: 'text', text: formatAppError(outcome.error) }] };
       }
-      return { content: [{ type: 'text', text: JSON.stringify(r.value, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(outcome.value, null, 2) }] };
     },
   );
 }

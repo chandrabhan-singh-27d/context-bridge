@@ -47,12 +47,12 @@ export async function openPrHandler(
         repo: input.repo,
         ref: `heads/${input.head}`,
       }),
-    (e) => mapGitHubError(e, refEndpoint),
+    (cause) => mapGitHubError(cause, refEndpoint),
   );
   if (!headRef.ok) return headRef;
 
   const endpoint = `POST /repos/${input.owner}/${input.repo}/pulls`;
-  const r = await tryCatch(
+  const opened = await tryCatch(
     () =>
       client.rest.pulls.create({
         owner: input.owner,
@@ -63,13 +63,13 @@ export async function openPrHandler(
         body: input.body,
         ...(input.draft !== undefined ? { draft: input.draft } : {}),
       }),
-    (e) => mapGitHubError(e, endpoint),
+    (cause) => mapGitHubError(cause, endpoint),
   );
-  if (!r.ok) return r;
+  if (!opened.ok) return opened;
   return ok({
-    number: r.value.data.number,
-    htmlUrl: r.value.data.html_url,
-    draft: r.value.data.draft ?? false,
+    number: opened.value.data.number,
+    htmlUrl: opened.value.data.html_url,
+    draft: opened.value.data.draft ?? false,
   });
 }
 
@@ -79,11 +79,11 @@ export function registerOpenPr(server: McpServer, client: GitHubClient): void {
     'Open a pull request from `head` to `base`. `body` may include "Closes #N" markers. Write surface — requires WRITES_ENABLED.',
     openPrInputSchema,
     async (args) => {
-      const r = await openPrHandler(client, args);
-      if (!r.ok) {
-        return { isError: true, content: [{ type: 'text', text: formatAppError(r.error) }] };
+      const outcome = await openPrHandler(client, args);
+      if (!outcome.ok) {
+        return { isError: true, content: [{ type: 'text', text: formatAppError(outcome.error) }] };
       }
-      return { content: [{ type: 'text', text: JSON.stringify(r.value, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(outcome.value, null, 2) }] };
     },
   );
 }
