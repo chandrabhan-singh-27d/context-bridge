@@ -14,7 +14,7 @@ import { err, ok, type Result } from '../lib/result.ts';
  */
 
 const LogLevel = z.enum(['debug', 'info', 'warn', 'error']);
-const LlmProviderName = z.enum(['groq']);
+const LlmProviderName = z.enum(['groq', 'openai', 'anthropic']);
 
 const RepoSlug = z
   .string()

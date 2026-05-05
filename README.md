@@ -214,7 +214,7 @@ See `SECURITY.md` for the full threat model.
 | **Cache** | In-memory LRU+TTL primitive · `bun:sqlite` persistent layer |
 | **Logger** | In-tree structured JSON logger (stderr only, auto-redaction) |
 | **Companion UI** | Hono (Bun.serve) + vanilla HTML/JS (no build step) |
-| **LLM (optional)** | Vendor-agnostic `LlmProvider` port (`src/llm/`). Default adapter: Groq. Add a provider = one adapter file + enum entry; zero call-site edits. |
+| **LLM (optional)** | Vendor-agnostic `LlmProvider` port (`src/llm/`). Adapters shipped: Groq (default), OpenAI, Anthropic. Add a provider = one adapter file + enum entry; zero call-site edits. |
 | **Distribution** | `bun build --compile` → single static binary |
 
 ---

@@ -39,7 +39,9 @@ src/config/env.ts                ← Zod env loader, returns Result
 
 src/llm/                         ← vendor-agnostic LLM port + helpers
   src/llm/provider.ts            ← LlmProvider interface + Chat types
-  src/llm/groq.ts                ← Groq adapter (default)
+  src/llm/groq.ts                ← Groq adapter (default; OpenAI-compatible API)
+  src/llm/openai.ts              ← OpenAI adapter (chat/completions endpoint)
+  src/llm/anthropic.ts           ← Anthropic adapter (Messages API; system field)
   src/llm/factory.ts             ← buildProvider(env) → LlmProvider | null
   src/llm/prompts.ts             ← pure prompt builders (issue/PR triage)
   src/llm/parse.ts               ← LLM JSON response parser + Zod validator

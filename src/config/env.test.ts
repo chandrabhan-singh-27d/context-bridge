@@ -74,8 +74,16 @@ describe('loadEnv', () => {
     if (r.ok) expect(r.value.LLM_PROVIDER).toBe('groq');
   });
 
+  test('LLM_PROVIDER accepts groq | openai | anthropic', () => {
+    for (const provider of ['groq', 'openai', 'anthropic']) {
+      const r = loadEnv({ GITHUB_TOKEN: 't', LLM_PROVIDER: provider });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value.LLM_PROVIDER).toBe(provider as 'groq' | 'openai' | 'anthropic');
+    }
+  });
+
   test('LLM_PROVIDER rejects unknown provider', () => {
-    const r = loadEnv({ GITHUB_TOKEN: 't', LLM_PROVIDER: 'openai' });
+    const r = loadEnv({ GITHUB_TOKEN: 't', LLM_PROVIDER: 'cohere' });
     expect(r.ok).toBe(false);
   });
 
