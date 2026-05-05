@@ -12,8 +12,10 @@ Local-first MCP server giving any AI assistant — Claude Code, Cursor, Windsurf
 
 ## What It Does
 
-1. **Exposes a GitHub repo as MCP tools** — `get_repo_info`, `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`, `get_ci_status`, `get_commit_history`, `search_code`. Stdio transport, JSON-RPC framing, installs into any MCP-compatible client.
-2. **Read-only by design** — token scopes are minimum-permission (`repo:read`, `issues:read`, `pull_requests:read`). No write tools. Documented in `SECURITY.md`.
+1. **Exposes a GitHub repo as MCP tools.** Stdio transport, JSON-RPC framing, installs into any MCP-compatible client.
+   - **Read tools (always on):** `get_repo_info`, `search_issues`, `get_pull_request`, `get_pr_diff`, `list_review_comments`, `get_ci_status`, `get_commit_history`, `search_code`.
+   - **Write tools (opt-in via `WRITES_ENABLED=true`):** `comment_on_issue`, `comment_on_pr`, `label_issue`, `create_branch`, `commit_files`, `open_pr`. The agent can triage issues, raise PRs, and close issues *indirectly* by including `Closes #N` in a PR body — a human reviews and merges. The agent never closes/merges PRs, never pushes the default branch, never force-pushes.
+2. **Read-only by default; write surface is opt-in.** When `WRITES_ENABLED=false` (default) write tools are not registered at all. Token scopes are minimum-permission for the chosen mode. Capability vs. authority boundary documented in `SECURITY.md`.
 3. **Typed-Result everywhere** — every handler returns `Result<T, AppError>`. No `throw` for expected failures. Discriminated-union errors enforce exhaustive handling at compile time.
 4. **Validated at the MCP boundary** — Zod schemas on every tool input. Raw input never reaches business logic.
 5. **Cached responses** — in-memory LRU + TTL today; `bun:sqlite` persistent layer (5-min TTL) lands later. Read path: LRU → SQLite → GitHub.
@@ -29,7 +31,7 @@ Runs entirely on your machine. Only external dep is a GitHub PAT.
 ### Prerequisites
 
 - Bun 1.3+
-- GitHub Personal Access Token with `repo:read`, `issues:read`, `pull_requests:read`
+- GitHub Personal Access Token. Read-only mode (default): `repo:read`, `issues:read`, `pull_requests:read`. Write mode (`WRITES_ENABLED=true`): also `issues:write`, `pull_requests:write`, `contents:write` — or for classic PATs, `repo` (or `public_repo`) covers all three.
 
 ### 1. Clone and install
 
@@ -183,7 +185,7 @@ See `ARCHITECTURE.md` for the dependency graph + invariants.
 - **No raw env access** — `process.env.X` forbidden outside `src/config/env.ts`. Validated at startup.
 - **Logger redaction** — keys matching `token | password | secret | api_key | authorization | cookie | bearer` are auto-redacted at any nesting depth (case-insensitive).
 - **Rate-limit awareness** — per-IP token bucket on the companion UI; `X-RateLimit-Remaining` soft/hard thresholds on outbound GitHub calls.
-- **No write surface** — server exposes only read tools. Octokit client is constructed without write scopes.
+- **Write surface is fail-closed** — registered only when `WRITES_ENABLED=true`. Even with broad token scopes, write tools never appear in `tools/list` unless the env flag is set. The set of write tools is intentionally narrow: comment, label, create branch, commit files (non-default branch only), open PR. Closing issues, closing/merging PRs, force-push, ref deletion, workflow dispatch, and repo-settings changes are HITL-only by design.
 - **No AI-tool attribution** in commits, PR bodies, or md files. No "Co-Authored-By", no badges.
 
 See `SECURITY.md` for the full threat model.
@@ -204,6 +206,7 @@ See `SECURITY.md` for the full threat model.
 | **Cache** | In-memory LRU+TTL primitive · `bun:sqlite` persistent layer |
 | **Logger** | In-tree structured JSON logger (stderr only, auto-redaction) |
 | **Companion UI** | Hono (Bun.serve) + vanilla HTML/JS (no build step) |
+| **LLM (optional)** | Vendor-agnostic `LlmProvider` port (`src/llm/`). Default adapter: Groq. Add a provider = one adapter file + enum entry; zero call-site edits. |
 | **Distribution** | `bun build --compile` → single static binary |
 
 ---
