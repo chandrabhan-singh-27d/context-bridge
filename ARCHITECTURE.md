@@ -46,6 +46,12 @@ src/llm/                         ← vendor-agnostic LLM port + helpers
   src/llm/prompts.ts             ← pure prompt builders (issue/PR triage)
   src/llm/parse.ts               ← LLM JSON response parser + Zod validator
 
+src/embeddings/                  ← vendor-agnostic embedding port (no consumer yet)
+  src/embeddings/provider.ts     ← EmbeddingProvider interface + Embed types
+  src/embeddings/openai.ts       ← OpenAI text-embedding-3-* adapter
+  src/embeddings/voyage.ts       ← Voyage voyage-3 adapter
+  src/embeddings/factory.ts      ← buildEmbeddingProvider(env) → EmbeddingProvider | null
+
 src/lib/logging/logger.ts        ← structured logger (stderr only)
 src/lib/cache/lru-cache.ts       ← LRU + TTL cache primitive
 ```
@@ -152,6 +158,17 @@ Two tools depend on the LLM port: `summarize_issue` and `triage_pr`. Both:
 Tools are registered only when `buildProvider(env)` returns non-null (i.e. `LLM_API_KEY` is set). Same fail-closed pattern as the write surface.
 
 A third tool — `propose_fix` — is a *composite*: it gates on **both** `WRITES_ENABLED=true` *and* `LLM_API_KEY`. It reuses the existing `createBranchHandler`, `commitFilesHandler`, and `openPrHandler` rather than reaching for Octokit directly, so all the per-tool guards (no-default-branch commit, head≠base, etc.) apply transitively. The PR is always opened as a draft; the LLM body is checked for a `Closes #N` marker and one is appended if missing.
+
+## How to add a new embedding provider
+
+Same pattern as the LLM port:
+
+1. Create `src/embeddings/<name>.ts` exporting `create<Name>EmbeddingProvider(deps): EmbeddingProvider`. Implement `embed()` against the provider's API. Map errors to `AppError` (auth / rate-limit / api / internal).
+2. Create `src/embeddings/<name>.test.ts` with a `fetch` fake — never make live calls in tests.
+3. Append `<name>` to the `EmbeddingProviderName` enum in `src/config/env.ts`.
+4. Add one switch arm in `src/embeddings/factory.ts` returning the new adapter.
+
+Zero call-site edits when the first consumer ships. The seam (`EmbeddingProvider`) is the contract.
 
 ## How to add a new LLM provider
 

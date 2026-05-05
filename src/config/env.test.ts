@@ -94,4 +94,29 @@ describe('loadEnv', () => {
       expect(r.value.LLM_MODEL).toBeUndefined();
     }
   });
+
+  test('EMBEDDING_PROVIDER defaults to openai', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't' });
+    if (r.ok) expect(r.value.EMBEDDING_PROVIDER).toBe('openai');
+  });
+
+  test('EMBEDDING_PROVIDER accepts openai | voyage', () => {
+    for (const provider of ['openai', 'voyage']) {
+      const r = loadEnv({ GITHUB_TOKEN: 't', EMBEDDING_PROVIDER: provider });
+      expect(r.ok).toBe(true);
+    }
+  });
+
+  test('EMBEDDING_PROVIDER rejects unknown provider', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't', EMBEDDING_PROVIDER: 'cohere' });
+    expect(r.ok).toBe(false);
+  });
+
+  test('EMBEDDING_API_KEY and EMBEDDING_MODEL optional', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't' });
+    if (r.ok) {
+      expect(r.value.EMBEDDING_API_KEY).toBeUndefined();
+      expect(r.value.EMBEDDING_MODEL).toBeUndefined();
+    }
+  });
 });
