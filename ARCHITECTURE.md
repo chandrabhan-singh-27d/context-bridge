@@ -149,6 +149,8 @@ Two tools depend on the LLM port: `summarize_issue` and `triage_pr`. Both:
 
 Tools are registered only when `buildProvider(env)` returns non-null (i.e. `LLM_API_KEY` is set). Same fail-closed pattern as the write surface.
 
+A third tool — `propose_fix` — is a *composite*: it gates on **both** `WRITES_ENABLED=true` *and* `LLM_API_KEY`. It reuses the existing `createBranchHandler`, `commitFilesHandler`, and `openPrHandler` rather than reaching for Octokit directly, so all the per-tool guards (no-default-branch commit, head≠base, etc.) apply transitively. The PR is always opened as a draft; the LLM body is checked for a `Closes #N` marker and one is appended if missing.
+
 ## How to add a new LLM provider
 
 1. Create `src/llm/<name>.ts` exporting `create<Name>Provider(deps): LlmProvider`. Implement `chat()` against the provider's API. Map provider errors to `AppError` (auth / rate-limit / api / internal).

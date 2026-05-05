@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildIssueSummaryPrompt, buildPrTriagePrompt } from './prompts.ts';
+import { buildIssueSummaryPrompt, buildProposeFixPrompt, buildPrTriagePrompt } from './prompts.ts';
 
 describe('buildIssueSummaryPrompt', () => {
   test('emits system + user roles in order', () => {
@@ -107,5 +107,42 @@ describe('buildPrTriagePrompt', () => {
     });
     const userContent = messages[1]?.content ?? '';
     expect(userContent).toContain('Diff (truncated)');
+  });
+});
+
+describe('buildProposeFixPrompt', () => {
+  test('wraps issue + files in delimiters and references issue number', () => {
+    const messages = buildProposeFixPrompt({
+      issueNumber: 42,
+      issueTitle: 'fix typo in README',
+      issueBody: 'introducton → introduction',
+      issueAuthor: 'alice',
+      issueLabels: ['typo', 'docs'],
+      comments: [{ author: 'bob', body: 'good catch' }],
+      files: [{ path: 'README.md', content: '# Project\nIntroducton...' }],
+    });
+    const systemContent = messages[0]?.content ?? '';
+    const userContent = messages[1]?.content ?? '';
+    expect(systemContent).toContain('Closes #<NUMBER>');
+    expect(systemContent).toContain('untrusted');
+    expect(userContent).toContain('<ISSUE number="42">');
+    expect(userContent).toContain('</ISSUE>');
+    expect(userContent).toContain('<FILES>');
+    expect(userContent).toContain('--- README.md ---');
+    expect(userContent).toContain('Introducton');
+  });
+
+  test('marks empty file context explicitly', () => {
+    const messages = buildProposeFixPrompt({
+      issueNumber: 1,
+      issueTitle: 't',
+      issueBody: null,
+      issueAuthor: null,
+      issueLabels: [],
+      comments: [],
+      files: [],
+    });
+    const userContent = messages[1]?.content ?? '';
+    expect(userContent).toContain('no file context provided');
   });
 });
