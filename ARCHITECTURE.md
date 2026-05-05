@@ -29,12 +29,18 @@ Read bottom-up. Lower layers know nothing about layers above.
 ```
 src/server.ts                    ← entry: builds MCP server, connects stdio
   src/mcp/server.ts              ← buildServer() factory + SERVER_INFO
-    src/mcp/tools/index.ts       ← registerTools() — fan-out to per-tool registers
+    src/mcp/tools/index.ts       ← registerTools() — read tools always,
+                                    write tools only when WRITES_ENABLED
       src/mcp/tools/<tool>.ts    ← pure handler + registration shim per tool
 
 src/config/env.ts                ← Zod env loader, returns Result
   src/lib/result.ts              ← Result<T, E> primitive
   src/lib/errors.ts              ← AppError discriminated union
+
+src/llm/                         ← vendor-agnostic LLM port
+  src/llm/provider.ts            ← LlmProvider interface + Chat types
+  src/llm/groq.ts                ← Groq adapter (default)
+  src/llm/factory.ts             ← buildProvider(env) → LlmProvider | null
 
 src/lib/logging/logger.ts        ← structured logger (stderr only)
 src/lib/cache/lru-cache.ts       ← LRU + TTL cache primitive
@@ -122,4 +128,19 @@ The E2E suite (`src/server.e2e.test.ts`) exercises the binary by spawning `bun r
 - No HTTP server in the MCP path. stdio only. The companion UI (PR #11) has its own Hono server, separate process.
 - No global state outside the server registration step.
 - No barrel exports. Import from source files directly.
-- No write access to GitHub. Token scopes are intentionally read-only (`repo:read`, `issues:read`, `pull_requests:read`). Documented in `.env.example` and `SECURITY.md`.
+- No closing or merging PRs, no pushing default branch, no force-push, no ref deletion, no workflow dispatch, no repo-settings edits. Those are HITL-only. See `SECURITY.md` "Write surface — capability vs authority".
+
+## HITL boundary (write surface)
+
+When `WRITES_ENABLED=true`, the server registers six write tools: `comment_on_issue`, `comment_on_pr`, `label_issue`, `create_branch`, `commit_files`, `open_pr`. The agent uses these to flag issues (label + comment), raise PRs, and indirectly close issues via `Closes #N` in the PR body — a human merges, GitHub auto-closes.
+
+`commit_files` rejects the default branch as a target. `open_pr` rejects `head === base` and validates the head ref exists. `create_branch` defaults to default-branch HEAD as the source. There is no path in the codebase that closes/merges PRs, force-pushes, deletes refs, or modifies repo settings — and no token scope on the read-only path can ever expose write tools (registration is gated on `env.WRITES_ENABLED` before scope is read).
+
+## How to add a new LLM provider
+
+1. Create `src/llm/<name>.ts` exporting `create<Name>Provider(deps): LlmProvider`. Implement `chat()` against the provider's API. Map provider errors to `AppError` (auth / rate-limit / api / internal).
+2. Create `src/llm/<name>.test.ts` with a `fetch` fake — never make live calls in tests.
+3. Append `<name>` to the `LlmProviderName` enum in `src/config/env.ts`.
+4. Add one switch arm in `src/llm/factory.ts` returning the new adapter.
+
+Zero call-site edits. Consumers depend on `LlmProvider`, never on a vendor SDK.
