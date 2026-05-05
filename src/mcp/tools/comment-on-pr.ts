@@ -28,7 +28,7 @@ export async function commentOnPrHandler(
   input: CommentOnPrInput,
 ): Promise<Result<CommentOnPrResult, AppError>> {
   const endpoint = `POST /repos/${input.owner}/${input.repo}/issues/${input.number}/comments`;
-  const r = await tryCatch(
+  const posted = await tryCatch(
     () =>
       client.rest.issues.createComment({
         owner: input.owner,
@@ -36,10 +36,10 @@ export async function commentOnPrHandler(
         issue_number: input.number,
         body: input.body,
       }),
-    (e) => mapGitHubError(e, endpoint),
+    (cause) => mapGitHubError(cause, endpoint),
   );
-  if (!r.ok) return r;
-  return ok({ id: r.value.data.id, htmlUrl: r.value.data.html_url });
+  if (!posted.ok) return posted;
+  return ok({ id: posted.value.data.id, htmlUrl: posted.value.data.html_url });
 }
 
 export function registerCommentOnPr(server: McpServer, client: GitHubClient): void {
@@ -48,11 +48,11 @@ export function registerCommentOnPr(server: McpServer, client: GitHubClient): vo
     'Post a top-level comment on a pull request (PRs are issues for this endpoint). Write surface — requires WRITES_ENABLED.',
     commentOnPrInputSchema,
     async (args) => {
-      const r = await commentOnPrHandler(client, args);
-      if (!r.ok) {
-        return { isError: true, content: [{ type: 'text', text: formatAppError(r.error) }] };
+      const outcome = await commentOnPrHandler(client, args);
+      if (!outcome.ok) {
+        return { isError: true, content: [{ type: 'text', text: formatAppError(outcome.error) }] };
       }
-      return { content: [{ type: 'text', text: JSON.stringify(r.value, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(outcome.value, null, 2) }] };
     },
   );
 }

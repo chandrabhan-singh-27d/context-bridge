@@ -23,7 +23,7 @@ export interface CreateBranchResult {
   readonly sha: string;
 }
 
-async function resolveSha(
+async function resolveSourceSha(
   client: GitHubClient,
   owner: string,
   repo: string,
@@ -31,27 +31,27 @@ async function resolveSha(
 ): Promise<Result<string, AppError>> {
   if (fromRef !== undefined) {
     const endpoint = `GET /repos/${owner}/${repo}/git/ref/heads/${fromRef}`;
-    const r = await tryCatch(
+    const fetchedRef = await tryCatch(
       () => client.rest.git.getRef({ owner, repo, ref: `heads/${fromRef}` }),
-      (e) => mapGitHubError(e, endpoint),
+      (cause) => mapGitHubError(cause, endpoint),
     );
-    if (!r.ok) return r;
-    return ok(r.value.data.object.sha);
+    if (!fetchedRef.ok) return fetchedRef;
+    return ok(fetchedRef.value.data.object.sha);
   }
-  const endpoint = `GET /repos/${owner}/${repo}`;
-  const meta = await tryCatch(
+  const repoEndpoint = `GET /repos/${owner}/${repo}`;
+  const repoMeta = await tryCatch(
     () => client.rest.repos.get({ owner, repo }),
-    (e) => mapGitHubError(e, endpoint),
+    (cause) => mapGitHubError(cause, repoEndpoint),
   );
-  if (!meta.ok) return meta;
-  const head = meta.value.data.default_branch;
-  const refEndpoint = `GET /repos/${owner}/${repo}/git/ref/heads/${head}`;
-  const refRes = await tryCatch(
-    () => client.rest.git.getRef({ owner, repo, ref: `heads/${head}` }),
-    (e) => mapGitHubError(e, refEndpoint),
+  if (!repoMeta.ok) return repoMeta;
+  const defaultBranch = repoMeta.value.data.default_branch;
+  const defaultRefEndpoint = `GET /repos/${owner}/${repo}/git/ref/heads/${defaultBranch}`;
+  const defaultRef = await tryCatch(
+    () => client.rest.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` }),
+    (cause) => mapGitHubError(cause, defaultRefEndpoint),
   );
-  if (!refRes.ok) return refRes;
-  return ok(refRes.value.data.object.sha);
+  if (!defaultRef.ok) return defaultRef;
+  return ok(defaultRef.value.data.object.sha);
 }
 
 export async function createBranchHandler(
@@ -62,22 +62,22 @@ export async function createBranchHandler(
     return err(AppError.validation('name', 'name and fromRef must differ'));
   }
 
-  const sha = await resolveSha(client, input.owner, input.repo, input.fromRef);
-  if (!sha.ok) return sha;
+  const sourceSha = await resolveSourceSha(client, input.owner, input.repo, input.fromRef);
+  if (!sourceSha.ok) return sourceSha;
 
   const endpoint = `POST /repos/${input.owner}/${input.repo}/git/refs`;
-  const r = await tryCatch(
+  const created = await tryCatch(
     () =>
       client.rest.git.createRef({
         owner: input.owner,
         repo: input.repo,
         ref: `refs/heads/${input.name}`,
-        sha: sha.value,
+        sha: sourceSha.value,
       }),
-    (e) => mapGitHubError(e, endpoint),
+    (cause) => mapGitHubError(cause, endpoint),
   );
-  if (!r.ok) return r;
-  return ok({ ref: r.value.data.ref, sha: r.value.data.object.sha });
+  if (!created.ok) return created;
+  return ok({ ref: created.value.data.ref, sha: created.value.data.object.sha });
 }
 
 export function registerCreateBranch(server: McpServer, client: GitHubClient): void {
@@ -86,11 +86,11 @@ export function registerCreateBranch(server: McpServer, client: GitHubClient): v
     'Create a new branch from `fromRef` (or default branch HEAD). Write surface — requires WRITES_ENABLED.',
     createBranchInputSchema,
     async (args) => {
-      const r = await createBranchHandler(client, args);
-      if (!r.ok) {
-        return { isError: true, content: [{ type: 'text', text: formatAppError(r.error) }] };
+      const outcome = await createBranchHandler(client, args);
+      if (!outcome.ok) {
+        return { isError: true, content: [{ type: 'text', text: formatAppError(outcome.error) }] };
       }
-      return { content: [{ type: 'text', text: JSON.stringify(r.value, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(outcome.value, null, 2) }] };
     },
   );
 }

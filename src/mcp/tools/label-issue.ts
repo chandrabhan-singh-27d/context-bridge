@@ -27,7 +27,7 @@ export async function labelIssueHandler(
   input: LabelIssueInput,
 ): Promise<Result<LabelIssueResult, AppError>> {
   const endpoint = `POST /repos/${input.owner}/${input.repo}/issues/${input.number}/labels`;
-  const r = await tryCatch(
+  const labelled = await tryCatch(
     () =>
       client.rest.issues.addLabels({
         owner: input.owner,
@@ -35,10 +35,10 @@ export async function labelIssueHandler(
         issue_number: input.number,
         labels: [...input.labels],
       }),
-    (e) => mapGitHubError(e, endpoint),
+    (cause) => mapGitHubError(cause, endpoint),
   );
-  if (!r.ok) return r;
-  return ok({ applied: r.value.data.map((l) => l.name) });
+  if (!labelled.ok) return labelled;
+  return ok({ applied: labelled.value.data.map((label) => label.name) });
 }
 
 export function registerLabelIssue(server: McpServer, client: GitHubClient): void {
@@ -47,11 +47,11 @@ export function registerLabelIssue(server: McpServer, client: GitHubClient): voi
     'Add labels to a GitHub issue or PR. Existing labels are preserved. Write surface — requires WRITES_ENABLED.',
     labelIssueInputSchema,
     async (args) => {
-      const r = await labelIssueHandler(client, args);
-      if (!r.ok) {
-        return { isError: true, content: [{ type: 'text', text: formatAppError(r.error) }] };
+      const outcome = await labelIssueHandler(client, args);
+      if (!outcome.ok) {
+        return { isError: true, content: [{ type: 'text', text: formatAppError(outcome.error) }] };
       }
-      return { content: [{ type: 'text', text: JSON.stringify(r.value, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(outcome.value, null, 2) }] };
     },
   );
 }
