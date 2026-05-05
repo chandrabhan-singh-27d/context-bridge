@@ -53,4 +53,37 @@ describe('loadEnv', () => {
     const bad = loadEnv({ GITHUB_TOKEN: 't', DEFAULT_REPO: 'no-slash' });
     expect(bad.ok).toBe(false);
   });
+
+  test('WRITES_ENABLED defaults to false', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't' });
+    if (r.ok) expect(r.value.WRITES_ENABLED).toBe(false);
+  });
+
+  test('WRITES_ENABLED accepts "true" string', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't', WRITES_ENABLED: 'true' });
+    if (r.ok) expect(r.value.WRITES_ENABLED).toBe(true);
+  });
+
+  test('WRITES_ENABLED any non-true string is false', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't', WRITES_ENABLED: '1' });
+    if (r.ok) expect(r.value.WRITES_ENABLED).toBe(false);
+  });
+
+  test('LLM_PROVIDER defaults to groq', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't' });
+    if (r.ok) expect(r.value.LLM_PROVIDER).toBe('groq');
+  });
+
+  test('LLM_PROVIDER rejects unknown provider', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't', LLM_PROVIDER: 'openai' });
+    expect(r.ok).toBe(false);
+  });
+
+  test('LLM_API_KEY and LLM_MODEL are optional', () => {
+    const r = loadEnv({ GITHUB_TOKEN: 't' });
+    if (r.ok) {
+      expect(r.value.LLM_API_KEY).toBeUndefined();
+      expect(r.value.LLM_MODEL).toBeUndefined();
+    }
+  });
 });
