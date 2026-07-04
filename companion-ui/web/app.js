@@ -13,6 +13,34 @@ let tools = [];
 let selectedTool = null;
 let defaultRepo = null;
 
+const FIELD_HINT = {
+  query:        'Free-text search (e.g. "bug login", "feat: dark mode")',
+  state:        'Filter by state: open, closed, or all',
+  limit:        'Max results to return (1\u2013100)',
+  number:       'PR or issue number (e.g. 27)',
+  maxBytes:     'Max diff size in bytes (1024\u20131048576)',
+  ref:          'Branch name or commit SHA',
+  path:         'File path to filter by',
+  author:       'Git author email address',
+  since:        'ISO datetime — include commits after this',
+  until:        'ISO datetime — include commits before this',
+  branch:       'Branch name to filter CI runs',
+  body:         'Comment or PR body text (up to 64KB)',
+  labels:       'Array of label names (e.g. ["bug", "urgent"])',
+  name:         'New branch name',
+  fromRef:      'Source branch or ref to fork from',
+  message:      'Commit message',
+  files:        'Array of {path, content} objects',
+  title:        'PR title',
+  draft:        'Open as draft PR (true/false)',
+  head:         'Source branch for the PR',
+  base:         'Target branch for the PR',
+  owner:        'Repository owner (auto-filled from repo URL)',
+  repo:         'Repository name (auto-filled from repo URL)',
+  relevantPaths:'Array of file paths to include for LLM context',
+  baseBranch:   'Base branch for the fix PR (defaults to repo default)',
+};
+
 const TOOL_META = {
   ping:                 { title: 'Ping',                  summary: 'Health check. Returns a timestamped pong.' },
   get_repo_info:        { title: 'Repository Info',       summary: 'Fetch metadata for a GitHub repository.' },
@@ -97,12 +125,13 @@ function renderArgsHelp() {
     if (k === 'owner' || k === 'repo') continue;
     const isReq = required.includes(k);
     const type = v.type || 'any';
+    const hint = FIELD_HINT[k] || '';
     const pattern = v.pattern ? v.pattern.slice(0, 30) + (v.pattern.length > 30 ? '\u2026' : '') : '';
-    html += `<span class="arg-item"><span class="arg-name">${k}</span><span class="arg-type">${type}</span>${isReq ? '<span class="arg-req">required</span>' : '<span class="arg-opt">optional</span>'}${pattern ? `<span class="arg-pattern">${pattern}</span>` : ''}</span>`;
+    html += `<span class="arg-item"><span class="arg-name">${k}</span><span class="arg-type">${type}</span>${isReq ? '<span class="arg-req">required</span>' : '<span class="arg-opt">optional</span>'}${hint ? `<span class="arg-hint">${hint}</span>` : ''}${pattern ? `<span class="arg-pattern">${pattern}</span>` : ''}</span>`;
   }
   if (parsed) {
-    html = `<span class="arg-item"><span class="arg-name">owner</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-value">${parsed.owner}</span></span>` +
-           `<span class="arg-item"><span class="arg-name">repo</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-value">${parsed.repo}</span></span>` +
+    html = `<span class="arg-item"><span class="arg-name">owner</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-hint">${FIELD_HINT.owner}</span><span class="arg-value">${parsed.owner}</span></span>` +
+           `<span class="arg-item"><span class="arg-name">repo</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-hint">${FIELD_HINT.repo}</span><span class="arg-value">${parsed.repo}</span></span>` +
            html;
   }
   argsHelp.innerHTML = html;
