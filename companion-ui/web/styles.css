@@ -112,6 +112,64 @@ textarea {
   letter-spacing: 0;
 }
 
+.args-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 0;
+}
+
+.arg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.arg-name {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.arg-type {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.arg-req {
+  color: var(--ok);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.arg-opt {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.arg-pattern {
+  color: #d29922;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.arg-value {
+  color: var(--accent);
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.args-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .dropdown {
   position: relative;
   width: 100%;

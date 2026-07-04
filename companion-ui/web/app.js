@@ -3,6 +3,7 @@ const toolBtn = $('tool-btn');
 const toolList = $('tool-list');
 const repoUrl = $('repo-url');
 const args = $('args');
+const argsHelp = $('args-help');
 const result = $('result');
 const status = $('status');
 const runBtn = $('run');
@@ -81,6 +82,32 @@ function renderArgs() {
   args.value = JSON.stringify(buildArgs(), null, 2);
 }
 
+function renderArgsHelp() {
+  const t = tools.find((x) => x.name === selectedTool);
+  if (!t) { argsHelp.innerHTML = ''; return; }
+  const schema = t.inputSchema;
+  if (!schema || typeof schema !== 'object' || !schema.properties) {
+    argsHelp.innerHTML = '<span class="args-empty">no arguments</span>';
+    return;
+  }
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  const parsed = parseRepoUrl(repoUrl.value);
+  let html = '';
+  for (const [k, v] of Object.entries(schema.properties)) {
+    if (k === 'owner' || k === 'repo') continue;
+    const isReq = required.includes(k);
+    const type = v.type || 'any';
+    const pattern = v.pattern ? v.pattern.slice(0, 30) + (v.pattern.length > 30 ? '\u2026' : '') : '';
+    html += `<span class="arg-item"><span class="arg-name">${k}</span><span class="arg-type">${type}</span>${isReq ? '<span class="arg-req">required</span>' : '<span class="arg-opt">optional</span>'}${pattern ? `<span class="arg-pattern">${pattern}</span>` : ''}</span>`;
+  }
+  if (parsed) {
+    html = `<span class="arg-item"><span class="arg-name">owner</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-value">${parsed.owner}</span></span>` +
+           `<span class="arg-item"><span class="arg-name">repo</span><span class="arg-type">string</span><span class="arg-req">required</span><span class="arg-value">${parsed.repo}</span></span>` +
+           html;
+  }
+  argsHelp.innerHTML = html;
+}
+
 async function loadHealth() {
   try {
     const r = await fetch('/api/health');
@@ -105,9 +132,13 @@ function selectTool(name) {
   toolBtn.textContent = meta.title || name;
   closeDropdown();
   renderArgs();
+  renderArgsHelp();
 }
 
-repoUrl.addEventListener('input', renderArgs);
+repoUrl.addEventListener('input', () => {
+  renderArgs();
+  renderArgsHelp();
+});
 
 async function loadTools() {
   setStatus('loading tools\u2026');
