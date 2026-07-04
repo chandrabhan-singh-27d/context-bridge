@@ -32,9 +32,10 @@ interface GeminiResponse {
   readonly modelVersion?: string;
 }
 
-function buildContents(
-  messages: ReadonlyArray<ChatMessage>,
-): { system: string | undefined; contents: ReadonlyArray<GeminiContent> } {
+function buildContents(messages: ReadonlyArray<ChatMessage>): {
+  system: string | undefined;
+  contents: ReadonlyArray<GeminiContent>;
+} {
   let system: string | undefined;
   const contents: Array<GeminiContent> = [];
 
@@ -68,7 +69,10 @@ function mapHttpStatus(status: number, message: string, model: string): AppError
   }
 }
 
-function toChatResponse(parsed: GeminiResponse, fallbackModel: string): Result<ChatResponse, AppError> {
+function toChatResponse(
+  parsed: GeminiResponse,
+  fallbackModel: string,
+): Result<ChatResponse, AppError> {
   const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
   if (typeof text !== 'string') {
     const reason = parsed.candidates?.[0]?.finishReason ?? 'unknown';
@@ -104,9 +108,13 @@ export function createGeminiProvider(deps: GeminiAdapterDeps): LlmProvider {
       if (system !== undefined) {
         body['systemInstruction'] = { parts: [{ text: system }] };
       }
-      if (req.maxTokens !== undefined) body['generationConfig'] = { maxOutputTokens: req.maxTokens };
+      if (req.maxTokens !== undefined)
+        body['generationConfig'] = { maxOutputTokens: req.maxTokens };
       if (req.temperature !== undefined) {
-        body['generationConfig'] = { ...(body['generationConfig'] as object), temperature: req.temperature };
+        body['generationConfig'] = {
+          ...(body['generationConfig'] as object),
+          temperature: req.temperature,
+        };
       }
 
       const url = `${endpoint}?key=${encodeURIComponent(deps.apiKey)}`;

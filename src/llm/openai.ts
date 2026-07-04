@@ -58,9 +58,10 @@ function toChatResponse(
 export function createOpenAiProvider(deps: OpenAiAdapterDeps): LlmProvider {
   const model = deps.model ?? DEFAULT_MODEL;
   const doFetch = deps.fetchImpl ?? fetch;
-  const endpoint = deps.baseUrl !== undefined
-    ? `${deps.baseUrl.replace(/\/+$/, '')}/chat/completions`
-    : DEFAULT_ENDPOINT;
+  const endpoint =
+    deps.baseUrl !== undefined
+      ? `${deps.baseUrl.replace(/\/+$/, '')}/chat/completions`
+      : DEFAULT_ENDPOINT;
 
   return {
     name: 'openai',
