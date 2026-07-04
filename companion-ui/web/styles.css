@@ -78,6 +78,7 @@ label {
   letter-spacing: 0.05em;
 }
 
+input,
 textarea,
 button,
 pre {
@@ -85,6 +86,7 @@ pre {
   font-size: 13px;
 }
 
+input,
 textarea {
   background: var(--bg);
   color: var(--fg);
@@ -92,8 +94,22 @@ textarea {
   border-radius: 6px;
   padding: 8px 10px;
   width: 100%;
+}
+
+textarea {
   resize: vertical;
   min-height: 140px;
+}
+
+.repo-input {
+  font-size: 13px;
+}
+
+.label-hint {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .dropdown {

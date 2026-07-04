@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const toolBtn = $('tool-btn');
 const toolList = $('tool-list');
+const repoUrl = $('repo-url');
 const args = $('args');
 const result = $('result');
 const status = $('status');
@@ -39,12 +40,56 @@ function setStatus(msg, kind = '') {
 
 const sub = document.querySelector('.sub');
 
+function parseRepoUrl(val) {
+  val = val.trim();
+  if (!val) return null;
+  const github = 'https://github.com/';
+  if (val.startsWith(github)) {
+    const rest = val.slice(github.length).replace(/\/$/, '');
+    const parts = rest.split('/');
+    if (parts.length >= 2) return { owner: parts[0], repo: parts[1] };
+  }
+  const parts = val.split('/');
+  if (parts.length === 2) return { owner: parts[0], repo: parts[1] };
+  return null;
+}
+
+function repoToUrl(owner, repo) {
+  return `https://github.com/${owner}/${repo}`;
+}
+
+function buildArgs() {
+  const t = tools.find((x) => x.name === selectedTool);
+  if (!t) return {};
+  const schema = t.inputSchema;
+  if (!schema || typeof schema !== 'object' || !schema.properties) return {};
+
+  const parsed = parseRepoUrl(repoUrl.value);
+  const example = {};
+  for (const [k, v] of Object.entries(schema.properties)) {
+    const required = Array.isArray(schema.required) && schema.required.includes(k);
+    if (required) {
+      if (k === 'owner' && parsed) { example.owner = parsed.owner; continue; }
+      if (k === 'repo' && parsed) { example.repo = parsed.repo; continue; }
+      example[k] = hint(v);
+    }
+  }
+  return example;
+}
+
+function renderArgs() {
+  args.value = JSON.stringify(buildArgs(), null, 2);
+}
+
 async function loadHealth() {
   try {
     const r = await fetch('/api/health');
     const j = await r.json();
     health.textContent = `mcp ${j.mcp ? 'alive' : 'dead'} \u00b7 ip-buckets ${j.bucketSize}`;
-    if (j.defaultRepo) defaultRepo = j.defaultRepo;
+    if (j.defaultRepo && !defaultRepo) {
+      defaultRepo = j.defaultRepo;
+      if (!repoUrl.value) repoUrl.value = repoToUrl(defaultRepo.split('/')[0], defaultRepo.split('/')[1]);
+    }
   } catch (_e) {
     health.textContent = 'health: unreachable';
   }
@@ -59,26 +104,10 @@ function selectTool(name) {
   const meta = TOOL_META[name] ?? {};
   toolBtn.textContent = meta.title || name;
   closeDropdown();
-  const t = tools.find((x) => x.name === name);
-  const schema = t?.inputSchema;
-  if (schema && typeof schema === 'object' && schema.properties) {
-    const example = {};
-    for (const [k, v] of Object.entries(schema.properties)) {
-      const required = Array.isArray(schema.required) && schema.required.includes(k);
-      if (required) {
-        example[k] = hint(v);
-        if (defaultRepo && (k === 'owner' || k === 'repo')) {
-          const [owner, repo] = defaultRepo.split('/');
-          example.owner = owner;
-          example.repo = repo;
-        }
-      }
-    }
-    args.value = JSON.stringify(example, null, 2);
-  } else {
-    args.value = '{}';
-  }
+  renderArgs();
 }
+
+repoUrl.addEventListener('input', renderArgs);
 
 async function loadTools() {
   setStatus('loading tools\u2026');
