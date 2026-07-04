@@ -78,7 +78,6 @@ label {
   letter-spacing: 0.05em;
 }
 
-select,
 textarea,
 button,
 pre {
@@ -86,7 +85,6 @@ pre {
   font-size: 13px;
 }
 
-select,
 textarea {
   background: var(--bg);
   color: var(--fg);
@@ -95,10 +93,87 @@ textarea {
   padding: 8px 10px;
   width: 100%;
   resize: vertical;
+  min-height: 140px;
 }
 
-textarea {
-  min-height: 140px;
+.dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-btn {
+  width: 100%;
+  text-align: left;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  position: relative;
+}
+
+.dropdown-btn::after {
+  content: '\25be';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+}
+
+.dropdown-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.dropdown-list.open {
+  display: block;
+}
+
+.dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.dropdown-item:last-child {
+  border-bottom: 0;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dd-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dd-summary {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 button {
@@ -133,13 +208,6 @@ button:disabled {
 
 .status.ok {
   color: var(--ok);
-}
-
-.tool-title {
-  margin: 4px 0 0;
-  font-size: 15px;
-  font-weight: 600;
-  min-height: 20px;
 }
 
 .desc {

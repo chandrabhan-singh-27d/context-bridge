@@ -14,10 +14,11 @@
     </header>
     <main>
       <section class="panel">
-        <label for="tool">Tool</label>
-        <select id="tool"></select>
-        <h3 id="tool-title" class="tool-title"></h3>
-        <p id="tool-desc" class="desc"></p>
+        <label>Tool</label>
+        <div id="tool-dd" class="dropdown">
+          <button id="tool-btn" class="dropdown-btn" type="button">Select a tool</button>
+          <div id="tool-list" class="dropdown-list"></div>
+        </div>
         <label for="args">Arguments (JSON)</label>
         <textarea id="args" rows="8" spellcheck="false">{}</textarea>
         <div class="row">

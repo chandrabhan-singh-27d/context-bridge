@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
-const toolSel = $('tool');
-const desc = $('tool-desc');
+const toolBtn = $('tool-btn');
+const toolList = $('tool-list');
 const args = $('args');
 const result = $('result');
 const status = $('status');
@@ -8,6 +8,7 @@ const runBtn = $('run');
 const health = $('health');
 
 let tools = [];
+let selectedTool = null;
 let defaultRepo = null;
 
 const TOOL_META = {
@@ -27,8 +28,8 @@ const TOOL_META = {
   commit_files:         { title: 'Commit Files',          summary: 'Atomically commit files to a non-default branch.' },
   open_pr:              { title: 'Open Pull Request',     summary: 'Open a PR. Supports draft mode and Closes markers.' },
   summarize_issue:      { title: 'Summarize Issue',       summary: 'LLM-generated summary with labels and next steps.' },
-  triage_pr:            { title: 'Triage PR',             summary: 'LLM risk assessment with labels and recommendations.' },
-  propose_fix:          { title: 'Propose Fix',           summary: 'End-to-end: issue → LLM patch → branch → draft PR.' },
+  triage_pr:            { title: 'Review PR',             summary: 'LLM risk assessment with labels and recommendations.' },
+  propose_fix:          { title: 'Propose Fix',           summary: 'End-to-end: issue -> LLM patch -> branch -> draft PR.' },
 };
 
 function setStatus(msg, kind = '') {
@@ -42,54 +43,23 @@ async function loadHealth() {
   try {
     const r = await fetch('/api/health');
     const j = await r.json();
-    health.textContent = `mcp ${j.mcp ? 'alive' : 'dead'} · ip-buckets ${j.bucketSize}`;
+    health.textContent = `mcp ${j.mcp ? 'alive' : 'dead'} \u00b7 ip-buckets ${j.bucketSize}`;
     if (j.defaultRepo) defaultRepo = j.defaultRepo;
   } catch (_e) {
     health.textContent = 'health: unreachable';
   }
 }
 
-function clearChildren(node) {
-  while (node.firstChild) node.removeChild(node.firstChild);
+function closeDropdown() {
+  toolList.classList.remove('open');
 }
 
-async function loadTools() {
-  setStatus('loading tools…');
-  try {
-    const r = await fetch('/api/tools');
-    if (!r.ok) {
-      setStatus(`tools/list ${r.status}`, 'error');
-      return;
-    }
-    const j = await r.json();
-    tools = Array.isArray(j.tools) ? j.tools : [];
-    const writeTools = ['comment_on_issue', 'comment_on_pr', 'label_issue', 'create_branch', 'commit_files', 'open_pr'];
-    const hasWrites = writeTools.some((name) => tools.some((t) => t.name === name));
-    sub.textContent = hasWrites
-      ? 'read-write GitHub access via MCP. Pick a tool, fill args, run.'
-      : 'read-only GitHub access via MCP. Pick a tool, fill args, run.';
-    clearChildren(toolSel);
-    for (const t of tools) {
-      const opt = document.createElement('option');
-      opt.value = t.name;
-      const meta = TOOL_META[t.name];
-      opt.textContent = meta ? meta.title : t.name;
-      toolSel.appendChild(opt);
-    }
-    onToolChange();
-    setStatus(`${tools.length} tools loaded`, 'ok');
-  } catch (e) {
-    setStatus(String(e), 'error');
-  }
-}
-
-const toolTitle = $('tool-title');
-
-function onToolChange() {
-  const t = tools.find((x) => x.name === toolSel.value);
-  const meta = TOOL_META[t?.name] ?? {};
-  toolTitle.textContent = meta.title ?? '';
-  desc.textContent = meta.summary ?? t?.description ?? '';
+function selectTool(name) {
+  selectedTool = name;
+  const meta = TOOL_META[name] ?? {};
+  toolBtn.textContent = meta.title || name;
+  closeDropdown();
+  const t = tools.find((x) => x.name === name);
   const schema = t?.inputSchema;
   if (schema && typeof schema === 'object' && schema.properties) {
     const example = {};
@@ -110,6 +80,45 @@ function onToolChange() {
   }
 }
 
+async function loadTools() {
+  setStatus('loading tools\u2026');
+  try {
+    const r = await fetch('/api/tools');
+    if (!r.ok) {
+      setStatus(`tools/list ${r.status}`, 'error');
+      return;
+    }
+    const j = await r.json();
+    tools = Array.isArray(j.tools) ? j.tools : [];
+    const writeTools = ['comment_on_issue', 'comment_on_pr', 'label_issue', 'create_branch', 'commit_files', 'open_pr'];
+    const hasWrites = writeTools.some((name) => tools.some((t) => t.name === name));
+    sub.textContent = hasWrites
+      ? 'read-write GitHub access via MCP. Pick a tool, fill args, run.'
+      : 'read-only GitHub access via MCP. Pick a tool, fill args, run.';
+
+    toolList.innerHTML = '';
+    for (const t of tools) {
+      const meta = TOOL_META[t.name] ?? {};
+      const item = document.createElement('button');
+      item.className = 'dropdown-item';
+      item.type = 'button';
+      item.innerHTML = `<span class="dd-title">${meta.title || t.name}</span><span class="dd-summary">${meta.summary || t.description || ''}</span>`;
+      item.addEventListener('click', () => selectTool(t.name));
+      toolList.appendChild(item);
+    }
+    setStatus(`${tools.length} tools loaded`, 'ok');
+  } catch (e) {
+    setStatus(String(e), 'error');
+  }
+}
+
+toolBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toolList.classList.toggle('open');
+});
+
+document.addEventListener('click', closeDropdown);
+
 function hint(v) {
   if (!v || typeof v !== 'object') return '';
   if (v.type === 'string') return '';
@@ -120,6 +129,10 @@ function hint(v) {
 }
 
 async function run() {
+  if (!selectedTool) {
+    setStatus('select a tool first', 'error');
+    return;
+  }
   let parsed;
   try {
     parsed = JSON.parse(args.value || '{}');
@@ -128,19 +141,19 @@ async function run() {
     return;
   }
   runBtn.disabled = true;
-  setStatus('running…');
+  setStatus('running\u2026');
   const t0 = performance.now();
   try {
     const r = await fetch('/api/call', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: toolSel.value, arguments: parsed }),
+      body: JSON.stringify({ name: selectedTool, arguments: parsed }),
     });
     const j = await r.json();
     const ms = Math.round(performance.now() - t0);
     result.textContent = JSON.stringify(j, null, 2);
-    if (r.ok) setStatus(`ok · ${ms}ms`, 'ok');
-    else setStatus(`http ${r.status} · ${ms}ms`, 'error');
+    if (r.ok) setStatus(`ok \u00b7 ${ms}ms`, 'ok');
+    else setStatus(`http ${r.status} \u00b7 ${ms}ms`, 'error');
   } catch (e) {
     setStatus(String(e), 'error');
   } finally {
@@ -148,7 +161,6 @@ async function run() {
   }
 }
 
-toolSel.addEventListener('change', onToolChange);
 runBtn.addEventListener('click', run);
 loadHealth();
 loadTools();
