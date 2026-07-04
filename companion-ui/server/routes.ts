@@ -9,6 +9,7 @@ export type RouteDeps = {
   readonly bucket: TokenBucket;
   readonly logger: Logger;
   readonly webRoot?: string;
+  readonly defaultRepo?: string;
 };
 
 export function createApp(deps: RouteDeps): Hono {
@@ -16,7 +17,12 @@ export function createApp(deps: RouteDeps): Hono {
   const log = deps.logger;
 
   app.get('/api/health', (c) =>
-    c.json({ ok: true, mcp: deps.bridge.isAlive(), bucketSize: deps.bucket.size() }),
+    c.json({
+      ok: true,
+      mcp: deps.bridge.isAlive(),
+      bucketSize: deps.bucket.size(),
+      defaultRepo: deps.defaultRepo ?? null,
+    }),
   );
 
   const api = new Hono();

@@ -8,6 +8,7 @@ const runBtn = $('run');
 const health = $('health');
 
 let tools = [];
+let defaultRepo = null;
 
 function setStatus(msg, kind = '') {
   status.textContent = msg;
@@ -21,6 +22,7 @@ async function loadHealth() {
     const r = await fetch('/api/health');
     const j = await r.json();
     health.textContent = `mcp ${j.mcp ? 'alive' : 'dead'} · ip-buckets ${j.bucketSize}`;
+    if (j.defaultRepo) defaultRepo = j.defaultRepo;
   } catch (_e) {
     health.textContent = 'health: unreachable';
   }
@@ -67,7 +69,14 @@ function onToolChange() {
     const example = {};
     for (const [k, v] of Object.entries(schema.properties)) {
       const required = Array.isArray(schema.required) && schema.required.includes(k);
-      if (required) example[k] = hint(v);
+      if (required) {
+        example[k] = hint(v);
+        if (defaultRepo && (k === 'owner' || k === 'repo')) {
+          const [owner, repo] = defaultRepo.split('/');
+          example.owner = owner;
+          example.repo = repo;
+        }
+      }
     }
     args.value = JSON.stringify(example, null, 2);
   } else {

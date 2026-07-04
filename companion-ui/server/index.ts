@@ -32,7 +32,13 @@ async function main(): Promise<void> {
   });
 
   const webRoot = resolve(import.meta.dir, '../web');
-  const app = createApp({ bridge, bucket, logger: log, webRoot });
+  const app = createApp({
+    bridge,
+    bucket,
+    logger: log,
+    webRoot,
+    defaultRepo: process.env['DEFAULT_REPO'],
+  });
 
   const init = await bridge.initialize();
   if (!init.ok) {
