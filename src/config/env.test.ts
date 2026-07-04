@@ -74,11 +74,11 @@ describe('loadEnv', () => {
     if (r.ok) expect(r.value.LLM_PROVIDER).toBe('groq');
   });
 
-  test('LLM_PROVIDER accepts groq | openai | anthropic', () => {
-    for (const provider of ['groq', 'openai', 'anthropic']) {
+  test('LLM_PROVIDER accepts groq | openai | anthropic | gemini', () => {
+    for (const provider of ['groq', 'openai', 'anthropic', 'gemini'] as const) {
       const r = loadEnv({ GITHUB_TOKEN: 't', LLM_PROVIDER: provider });
       expect(r.ok).toBe(true);
-      if (r.ok) expect(r.value.LLM_PROVIDER).toBe(provider as 'groq' | 'openai' | 'anthropic');
+      if (r.ok) expect(r.value.LLM_PROVIDER).toBe(provider);
     }
   });
 

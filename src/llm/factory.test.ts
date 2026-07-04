@@ -38,6 +38,12 @@ describe('buildProvider', () => {
     expect(p?.model).toBeTruthy();
   });
 
+  test('returns gemini adapter when configured', () => {
+    const p = buildProvider({ LLM_PROVIDER: 'gemini', LLM_API_KEY: 'ai-key' });
+    expect(p?.name).toBe('gemini');
+    expect(p?.model).toBeTruthy();
+  });
+
   test('LLM_MODEL override applies across providers', () => {
     const openai = buildProvider({
       LLM_PROVIDER: 'openai',

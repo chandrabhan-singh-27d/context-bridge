@@ -3,11 +3,12 @@ import { err, ok, type Result, tryCatch } from '../lib/result.ts';
 import type { ChatRequest, ChatResponse, LlmProvider } from './provider.ts';
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
-const ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 
 export interface OpenAiAdapterDeps {
   readonly apiKey: string;
   readonly model?: string;
+  readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
 }
 
@@ -27,7 +28,7 @@ function mapHttpStatus(status: number, message: string): AppError {
     case 429:
       return AppError.rateLimit(0, 0, message || 'rate limited');
     default:
-      return AppError.githubApi(status, message || 'openai api error', ENDPOINT);
+      return AppError.githubApi(status, message || 'openai api error', DEFAULT_ENDPOINT);
   }
 }
 
@@ -57,6 +58,10 @@ function toChatResponse(
 export function createOpenAiProvider(deps: OpenAiAdapterDeps): LlmProvider {
   const model = deps.model ?? DEFAULT_MODEL;
   const doFetch = deps.fetchImpl ?? fetch;
+  const endpoint =
+    deps.baseUrl !== undefined
+      ? `${deps.baseUrl.replace(/\/+$/, '')}/chat/completions`
+      : DEFAULT_ENDPOINT;
 
   return {
     name: 'openai',
@@ -79,7 +84,7 @@ export function createOpenAiProvider(deps: OpenAiAdapterDeps): LlmProvider {
       };
 
       const fetched = await tryCatch(
-        () => doFetch(ENDPOINT, requestInit),
+        () => doFetch(endpoint, requestInit),
         (cause) =>
           AppError.internal(
             `openai request failed: ${(cause as Error)?.message ?? 'unknown'}`,
