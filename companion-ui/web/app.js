@@ -10,6 +10,27 @@ const health = $('health');
 let tools = [];
 let defaultRepo = null;
 
+const TOOL_META = {
+  ping:                 { title: 'Ping',                  summary: 'Health check. Returns a timestamped pong.' },
+  get_repo_info:        { title: 'Repository Info',       summary: 'Fetch metadata for a GitHub repository.' },
+  search_issues:        { title: 'Search Issues',         summary: 'Search issues by keyword, state, and count.' },
+  get_pull_request:     { title: 'Pull Request Details',  summary: 'Fetch PR metadata: title, state, branches, stats.' },
+  get_pr_diff:          { title: 'PR Diff',               summary: 'Fetch the unified diff of a pull request.' },
+  list_review_comments: { title: 'Review Comments',       summary: 'List inline review comments on a PR.' },
+  get_ci_status:        { title: 'CI Status',             summary: 'List recent GitHub Actions workflow runs.' },
+  get_commit_history:   { title: 'Commit History',        summary: 'List commits with optional filters.' },
+  search_code:          { title: 'Search Code',           summary: 'Search code by keyword (30 req/min limit).' },
+  comment_on_issue:     { title: 'Comment on Issue',      summary: 'Post a comment on a GitHub issue.' },
+  comment_on_pr:        { title: 'Comment on PR',         summary: 'Post a top-level comment on a pull request.' },
+  label_issue:          { title: 'Label Issue',           summary: 'Add labels to an issue or pull request.' },
+  create_branch:        { title: 'Create Branch',         summary: 'Create a new branch from an existing ref.' },
+  commit_files:         { title: 'Commit Files',          summary: 'Atomically commit files to a non-default branch.' },
+  open_pr:              { title: 'Open Pull Request',     summary: 'Open a PR. Supports draft mode and Closes markers.' },
+  summarize_issue:      { title: 'Summarize Issue',       summary: 'LLM-generated summary with labels and next steps.' },
+  triage_pr:            { title: 'Triage PR',             summary: 'LLM risk assessment with labels and recommendations.' },
+  propose_fix:          { title: 'Propose Fix',           summary: 'End-to-end: issue → LLM patch → branch → draft PR.' },
+};
+
 function setStatus(msg, kind = '') {
   status.textContent = msg;
   status.className = `status ${kind}`;
@@ -51,7 +72,8 @@ async function loadTools() {
     for (const t of tools) {
       const opt = document.createElement('option');
       opt.value = t.name;
-      opt.textContent = t.name;
+      const meta = TOOL_META[t.name];
+      opt.textContent = meta ? meta.title : t.name;
       toolSel.appendChild(opt);
     }
     onToolChange();
@@ -61,9 +83,13 @@ async function loadTools() {
   }
 }
 
+const toolTitle = $('tool-title');
+
 function onToolChange() {
   const t = tools.find((x) => x.name === toolSel.value);
-  desc.textContent = t?.description ?? '';
+  const meta = TOOL_META[t?.name] ?? {};
+  toolTitle.textContent = meta.title ?? '';
+  desc.textContent = meta.summary ?? t?.description ?? '';
   const schema = t?.inputSchema;
   if (schema && typeof schema === 'object' && schema.properties) {
     const example = {};

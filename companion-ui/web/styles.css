@@ -135,6 +135,13 @@ button:disabled {
   color: var(--ok);
 }
 
+.tool-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 20px;
+}
+
 .desc {
   margin: 0;
   color: var(--muted);
