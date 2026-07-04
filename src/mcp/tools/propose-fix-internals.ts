@@ -25,6 +25,8 @@ export const proposeFixInputSchema = {
   relevantPaths: z.array(relativePath).max(MAX_RELEVANT_PATHS).optional(),
   baseBranch: z.string().min(1).max(255).optional(),
   draft: z.boolean().optional(),
+  returnPrompt: z.boolean().optional().default(false),
+  prompt: z.string().optional(),
 };
 
 export const proposalSchema = z.object({

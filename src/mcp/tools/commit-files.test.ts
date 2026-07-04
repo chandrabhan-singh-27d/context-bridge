@@ -25,7 +25,7 @@ function fakeClient(ops: FakeOps): GitHubClient {
         getRef: async () => ({ data: { object: { sha: ops.branchSha ?? 'parent' } } }),
         getCommit: async () => ({ data: { tree: { sha: ops.baseTreeSha ?? 'tree-base' } } }),
         createBlob: async ({ content }: { content: string }) => ({
-          data: { sha: (ops.blobSha ?? (() => 'blob-' + content.length))(content) },
+          data: { sha: (ops.blobSha ?? (() => `blob-${content.length}`))(content) },
         }),
         createTree: async () => ({ data: { sha: ops.treeSha ?? 'tree-new' } }),
         createCommit: async () => ({

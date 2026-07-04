@@ -3,6 +3,16 @@ import type { Logger } from '../../src/lib/logging/logger.ts';
 import type { McpBridge } from './mcp-bridge.ts';
 import { rateLimit } from './rate-limit.ts';
 import type { TokenBucket } from './token-bucket.ts';
+import { ISSUE_SYSTEM_PROMPT, PR_SYSTEM_PROMPT, PROPOSE_FIX_SYSTEM_PROMPT, SCAN_SYSTEM_PROMPT } from '../../src/llm/prompts.ts';
+import { SCAN_AND_FIX_PROMPT } from '../../src/mcp/tools/auto-triage.ts';
+
+const SYSTEM_PROMPTS: Record<string, string> = {
+  scan_repo: SCAN_SYSTEM_PROMPT,
+  auto_triage: SCAN_AND_FIX_PROMPT,
+  summarize_issue: ISSUE_SYSTEM_PROMPT,
+  triage_pr: PR_SYSTEM_PROMPT,
+  propose_fix: PROPOSE_FIX_SYSTEM_PROMPT,
+};
 
 export type RouteDeps = {
   readonly bridge: McpBridge;
@@ -57,6 +67,15 @@ export function createApp(deps: RouteDeps): Hono {
       return c.json({ error: r.error.message }, 502);
     }
     return c.json(r.value);
+  });
+
+  api.get('/system-prompt/:toolName', (c) => {
+    const toolName = c.req.param('toolName');
+    const prompt = SYSTEM_PROMPTS[toolName];
+    if (prompt === undefined) {
+      return c.json({ error: `unknown tool: ${toolName}` }, 404);
+    }
+    return c.json({ toolName, prompt });
   });
 
   app.route('/api', api);

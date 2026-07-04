@@ -14,12 +14,16 @@ const MAX_COMMENTS = 20;
 export const summarizeIssueInputSchema = {
   ...repoCoordsSchema,
   number: issueNumber,
+  returnPrompt: z.boolean().optional().default(false),
+  prompt: z.string().optional(),
 };
 
 export interface SummarizeIssueInput {
   readonly owner: string;
   readonly repo: string;
   readonly number: number;
+  readonly returnPrompt?: boolean;
+  readonly prompt?: string | undefined;
 }
 
 const summarySchema = z.object({
@@ -33,6 +37,7 @@ export interface SummarizeIssueResult {
   readonly suggestedLabels: ReadonlyArray<string>;
   readonly suggestedNextSteps: ReadonlyArray<string>;
   readonly llmModel: string;
+  readonly _prompt?: string;
 }
 
 export async function summarizeIssueHandler(
@@ -66,7 +71,7 @@ export async function summarizeIssueHandler(
   if (!commentsFetched.ok) return commentsFetched;
 
   const issue = issueFetched.value.data;
-  const messages = buildIssueSummaryPrompt({
+  const builtMessages = buildIssueSummaryPrompt({
     title: issue.title,
     body: issue.body ?? null,
     state: issue.state,
@@ -79,6 +84,11 @@ export async function summarizeIssueHandler(
       body: comment.body ?? '',
     })),
   });
+  if (input.returnPrompt) {
+    const promptText = builtMessages.map((m) => `${m.role === 'system' ? 'System:\n' : 'User:\n'}${m.content}`).join('\n\n---\n\n');
+    return ok({ summary: '', suggestedLabels: [], suggestedNextSteps: [], llmModel: '', _prompt: promptText });
+  }
+  const messages = input.prompt !== undefined ? [builtMessages[0]!, { role: 'user' as const, content: input.prompt }] : builtMessages;
 
   const completed = await llm.chat({ messages, temperature: 0.2 });
   if (!completed.ok) return completed;

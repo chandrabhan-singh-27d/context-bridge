@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GitHubClient } from '../../github/client.ts';
 import type { TieredCache } from '../../lib/cache/tiered-cache.ts';
 import type { LlmProvider } from '../../llm/provider.ts';
+import { registerAutoTriage } from './auto-triage.ts';
 import { registerCommentOnIssue } from './comment-on-issue.ts';
 import { registerCommentOnPr } from './comment-on-pr.ts';
 import { registerCommitFiles } from './commit-files.ts';
@@ -16,6 +17,7 @@ import { registerListReviewComments } from './list-review-comments.ts';
 import { registerOpenPr } from './open-pr.ts';
 import { registerPing } from './ping.ts';
 import { registerProposeFix } from './propose-fix.ts';
+import { registerScanRepo } from './scan-repo.ts';
 import { registerSearchCode } from './search-code.ts';
 import { registerSearchIssues } from './search-issues.ts';
 import { registerSummarizeIssue } from './summarize-issue.ts';
@@ -49,9 +51,11 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
   }
 
   if (deps.llm !== null) {
+    registerScanRepo(server, deps.github, deps.llm);
     registerSummarizeIssue(server, deps.github, deps.llm);
     registerTriagePr(server, deps.github, deps.llm);
     if (deps.writesEnabled) {
+      registerAutoTriage(server, deps.github, deps.llm);
       registerProposeFix(server, deps.github, deps.llm);
     }
   }
