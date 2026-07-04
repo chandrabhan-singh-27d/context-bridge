@@ -319,3 +319,30 @@ footer {
 footer a {
   color: var(--muted);
 }
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copy-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.copy-btn:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.copy-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

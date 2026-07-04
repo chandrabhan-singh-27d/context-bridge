@@ -7,6 +7,7 @@ const argsHelp = $('args-help');
 const result = $('result');
 const status = $('status');
 const runBtn = $('run');
+const copyBtn = $('copy-btn');
 const health = $('health');
 
 let tools = [];
@@ -100,6 +101,7 @@ function buildArgs() {
     if (required) {
       if (k === 'owner' && parsed) { example.owner = parsed.owner; continue; }
       if (k === 'repo' && parsed) { example.repo = parsed.repo; continue; }
+      if (k === 'query') { example.query = 'is:issue'; continue; }
       example[k] = hint(v);
     }
   }
@@ -251,6 +253,26 @@ async function run() {
 }
 
 runBtn.addEventListener('click', run);
+
+args.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    run();
+  }
+});
+
+copyBtn.addEventListener('click', async () => {
+  const text = result.textContent;
+  if (!text || text === '\u2014') return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const orig = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    copyBtn.disabled = true;
+    setTimeout(() => { copyBtn.textContent = orig; copyBtn.disabled = false; }, 1500);
+  } catch { setStatus('copy failed', 'error'); }
+});
+
 loadHealth();
 loadTools();
 setInterval(loadHealth, 10_000);
