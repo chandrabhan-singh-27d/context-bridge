@@ -26,6 +26,8 @@ export interface ProposeFixInput {
   readonly relevantPaths?: ReadonlyArray<string> | undefined;
   readonly baseBranch?: string | undefined;
   readonly draft?: boolean | undefined;
+  readonly returnPrompt?: boolean;
+  readonly prompt?: string | undefined;
 }
 
 export interface ProposeFixResult {
@@ -34,6 +36,7 @@ export interface ProposeFixResult {
   readonly branchName: string;
   readonly commitSha: string;
   readonly llmModel: string;
+  readonly _prompt?: string;
 }
 
 export async function proposeFixHandler(
@@ -73,7 +76,7 @@ export async function proposeFixHandler(
   if (!fileContext.ok) return fileContext;
 
   const issue = issueFetched.value.data;
-  const messages = buildProposeFixPrompt({
+  const builtMessages = buildProposeFixPrompt({
     issueNumber: input.number,
     issueTitle: issue.title,
     issueBody: issue.body ?? null,
@@ -87,6 +90,11 @@ export async function proposeFixHandler(
     })),
     files: fileContext.value,
   });
+  if (input.returnPrompt) {
+    const promptText = builtMessages.map((m) => `${m.role === 'system' ? 'System:\n' : 'User:\n'}${m.content}`).join('\n\n---\n\n');
+    return ok({ prNumber: 0, prUrl: '', branchName: '', commitSha: '', llmModel: '', _prompt: promptText });
+  }
+  const messages = input.prompt !== undefined ? [builtMessages[0]!, { role: 'user' as const, content: input.prompt }] : builtMessages;
 
   const completed = await llm.chat({ messages, temperature: 0.1, maxTokens: 8_000 });
   if (!completed.ok) return completed;

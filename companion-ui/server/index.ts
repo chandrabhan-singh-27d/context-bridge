@@ -12,6 +12,33 @@ async function main(): Promise<void> {
     process.stderr.write(`companion-ui: ${formatAppError(envR.error)}\n`);
     process.exit(1);
   }
+
+  if (!process.env['GITHUB_TOKEN']) {
+    process.stderr.write([
+      'companion-ui: GITHUB_TOKEN is required.',
+      '',
+      '  Add to ~/.bashrc:',
+      '    export GITHUB_TOKEN="github_pat_..."',
+      '',
+      '  Then restart your terminal or run: source ~/.bashrc',
+      '',
+    ].join('\n'));
+    process.exit(1);
+  }
+
+  if (!process.env['LLM_API_KEY']) {
+    process.stderr.write([
+      'companion-ui: LLM_API_KEY is required for AI-powered tools.',
+      '',
+      '  Add to ~/.bashrc:',
+      '    export LLM_API_KEY="your-api-key"',
+      '',
+      '  Then restart your terminal or run: source ~/.bashrc',
+      '',
+      '  AI tools (Scan Repository, Auto-Scan & Fix, etc.) will be unavailable without it.',
+    ].join('\n'));
+  }
+
   const env = envR.value;
   const log = createLogger({
     level: env.LOG_LEVEL,
@@ -32,12 +59,13 @@ async function main(): Promise<void> {
   });
 
   const webRoot = resolve(import.meta.dir, '../web');
+  const maybeRepo = process.env['DEFAULT_REPO'];
   const app = createApp({
     bridge,
     bucket,
     logger: log,
     webRoot,
-    defaultRepo: process.env['DEFAULT_REPO'],
+    ...(maybeRepo !== undefined ? { defaultRepo: maybeRepo } : {}),
   });
 
   const init = await bridge.initialize();

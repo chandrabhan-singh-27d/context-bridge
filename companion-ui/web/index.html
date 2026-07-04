@@ -26,6 +26,10 @@
         <label for="args">Arguments <span class="label-hint">(JSON)</span></label>
         <textarea id="args" rows="8" spellcheck="false">{}</textarea>
         <div id="args-help" class="args-help"></div>
+        <div id="prompt-section" class="prompt-section hidden">
+          <label for="prompt-text">Prompt <span class="label-hint">(editable — changes sent as prompt arg on run)</span></label>
+          <textarea id="prompt-text" rows="10" spellcheck="false" class="prompt-textarea"></textarea>
+        </div>
         <div class="row">
           <button id="run" type="button">Run</button>
           <span id="status" class="status"></span>

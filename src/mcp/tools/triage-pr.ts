@@ -14,12 +14,16 @@ const MAX_DIFF_BYTES = 200_000;
 export const triagePrInputSchema = {
   ...repoCoordsSchema,
   number: issueNumber,
+  returnPrompt: z.boolean().optional().default(false),
+  prompt: z.string().optional(),
 };
 
 export interface TriagePrInput {
   readonly owner: string;
   readonly repo: string;
   readonly number: number;
+  readonly returnPrompt?: boolean;
+  readonly prompt?: string | undefined;
 }
 
 const triageSchema = z.object({
@@ -36,6 +40,7 @@ export interface TriagePrResult {
   readonly reviewerNotes: ReadonlyArray<string>;
   readonly llmModel: string;
   readonly diffTruncated: boolean;
+  readonly _prompt?: string;
 }
 
 export async function triagePrHandler(
@@ -73,7 +78,7 @@ export async function triagePrHandler(
   const diff = diffTruncated ? rawDiff.slice(0, MAX_DIFF_BYTES) : rawDiff;
 
   const pr = prFetched.value.data;
-  const messages = buildPrTriagePrompt({
+  const builtMessages = buildPrTriagePrompt({
     title: pr.title,
     body: pr.body ?? null,
     state: pr.state,
@@ -88,6 +93,11 @@ export async function triagePrHandler(
     diff,
     diffTruncated,
   });
+  if (input.returnPrompt) {
+    const promptText = builtMessages.map((m) => `${m.role === 'system' ? 'System:\n' : 'User:\n'}${m.content}`).join('\n\n---\n\n');
+    return ok({ summary: '', riskAreas: [], suggestedLabels: [], reviewerNotes: [], llmModel: '', diffTruncated: false, _prompt: promptText });
+  }
+  const messages = input.prompt !== undefined ? [builtMessages[0]!, { role: 'user' as const, content: input.prompt }] : builtMessages;
 
   const completed = await llm.chat({ messages, temperature: 0.2 });
   if (!completed.ok) return completed;
