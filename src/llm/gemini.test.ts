@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { createGeminiProvider } from './gemini.ts';
 
-function mockFetch(status: number, body: unknown, headers?: Record<string, string>) {
-  return async () =>
+function mockFetch(status: number, body: unknown, headers?: Record<string, string>): typeof fetch {
+  return (async () =>
     new Response(JSON.stringify(body), {
       status,
       headers: { 'content-type': 'application/json', ...headers },
-    });
+    })) as unknown as typeof fetch;
 }
 
 describe('createGeminiProvider', () => {
@@ -38,14 +38,14 @@ describe('createGeminiProvider', () => {
     let capturedBody: Record<string, unknown> = {};
     const provider = createGeminiProvider({
       apiKey: 'sekret',
-      fetchImpl: async (url, init) => {
-        capturedUrl = String(url);
+      fetchImpl: (async (url: string, init?: RequestInit) => {
+        capturedUrl = url;
         capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
         return new Response(
           JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         );
-      },
+      }) as unknown as typeof fetch,
     });
     await provider.chat({
       messages: [
@@ -55,21 +55,21 @@ describe('createGeminiProvider', () => {
     });
     expect(capturedUrl).toContain('key=sekret');
     expect(capturedUrl).toContain('gemini-2.0-flash');
-    expect(capturedBody.systemInstruction).toEqual({ parts: [{ text: 'you are a bot' }] });
-    expect(capturedBody.contents).toEqual([{ role: 'user', parts: [{ text: 'hi' }] }]);
+    expect(capturedBody['systemInstruction']).toEqual({ parts: [{ text: 'you are a bot' }] });
+    expect(capturedBody['contents']).toEqual([{ role: 'user', parts: [{ text: 'hi' }] }]);
   });
 
   test('maps assistant role to model role', async () => {
     let capturedBody: Record<string, unknown> = {};
     const provider = createGeminiProvider({
       apiKey: 'sekret',
-      fetchImpl: async (_url, init) => {
+      fetchImpl: (async (_url: string, init?: RequestInit) => {
         capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
         return new Response(
           JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         );
-      },
+      }) as unknown as typeof fetch,
     });
     await provider.chat({
       messages: [
@@ -77,7 +77,7 @@ describe('createGeminiProvider', () => {
         { role: 'assistant', content: 'hello' },
       ],
     });
-    const contents = capturedBody.contents as Array<{ role: string }>;
+    const contents = capturedBody['contents'] as Array<{ role: string }>;
     expect(contents[1]?.role).toBe('model');
   });
 

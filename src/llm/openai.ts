@@ -28,7 +28,7 @@ function mapHttpStatus(status: number, message: string): AppError {
     case 429:
       return AppError.rateLimit(0, 0, message || 'rate limited');
     default:
-      return AppError.githubApi(status, message || 'openai api error', ENDPOINT);
+      return AppError.githubApi(status, message || 'openai api error', DEFAULT_ENDPOINT);
   }
 }
 

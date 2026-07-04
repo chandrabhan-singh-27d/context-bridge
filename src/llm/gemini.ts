@@ -34,7 +34,7 @@ interface GeminiResponse {
 
 function buildContents(
   messages: ReadonlyArray<ChatMessage>,
-): { system?: string; contents: ReadonlyArray<GeminiContent> } {
+): { system: string | undefined; contents: ReadonlyArray<GeminiContent> } {
   let system: string | undefined;
   const contents: Array<GeminiContent> = [];
 
@@ -102,11 +102,11 @@ export function createGeminiProvider(deps: GeminiAdapterDeps): LlmProvider {
 
       const body: Record<string, unknown> = { contents };
       if (system !== undefined) {
-        body.systemInstruction = { parts: [{ text: system }] };
+        body['systemInstruction'] = { parts: [{ text: system }] };
       }
-      if (req.maxTokens !== undefined) body.generationConfig = { maxOutputTokens: req.maxTokens };
+      if (req.maxTokens !== undefined) body['generationConfig'] = { maxOutputTokens: req.maxTokens };
       if (req.temperature !== undefined) {
-        body.generationConfig = { ...(body.generationConfig as object), temperature: req.temperature };
+        body['generationConfig'] = { ...(body['generationConfig'] as object), temperature: req.temperature };
       }
 
       const url = `${endpoint}?key=${encodeURIComponent(deps.apiKey)}`;

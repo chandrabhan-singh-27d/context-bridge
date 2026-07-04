@@ -26,7 +26,11 @@ export function buildProvider(
     case 'groq':
       return createGroqProvider({ apiKey, ...overrideModel });
     case 'openai':
-      return createOpenAiProvider({ apiKey, ...overrideModel, baseUrl: env.LLM_BASE_URL });
+      return createOpenAiProvider({
+        apiKey,
+        ...overrideModel,
+        ...(env.LLM_BASE_URL !== undefined ? { baseUrl: env.LLM_BASE_URL } : {}),
+      });
     case 'anthropic':
       return createAnthropicProvider({ apiKey, ...overrideModel });
     case 'gemini':
