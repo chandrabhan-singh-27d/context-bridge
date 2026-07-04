@@ -14,6 +14,8 @@ function setStatus(msg, kind = '') {
   status.className = `status ${kind}`;
 }
 
+const sub = document.querySelector('.sub');
+
 async function loadHealth() {
   try {
     const r = await fetch('/api/health');
@@ -38,6 +40,11 @@ async function loadTools() {
     }
     const j = await r.json();
     tools = Array.isArray(j.tools) ? j.tools : [];
+    const writeTools = ['comment_on_issue', 'comment_on_pr', 'label_issue', 'create_branch', 'commit_files', 'open_pr'];
+    const hasWrites = writeTools.some((name) => tools.some((t) => t.name === name));
+    sub.textContent = hasWrites
+      ? 'read-write GitHub access via MCP. Pick a tool, fill args, run.'
+      : 'read-only GitHub access via MCP. Pick a tool, fill args, run.';
     clearChildren(toolSel);
     for (const t of tools) {
       const opt = document.createElement('option');
