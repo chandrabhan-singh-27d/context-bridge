@@ -14,7 +14,7 @@ import { err, ok, type Result } from '../lib/result.ts';
  */
 
 const LogLevel = z.enum(['debug', 'info', 'warn', 'error']);
-const LlmProviderName = z.enum(['groq', 'openai', 'anthropic']);
+const LlmProviderName = z.enum(['groq', 'openai', 'anthropic', 'gemini']);
 const EmbeddingProviderName = z.enum(['openai', 'voyage']);
 
 const RepoSlug = z
@@ -36,6 +36,7 @@ const envSchema = z.object({
   LLM_PROVIDER: LlmProviderName.default('groq'),
   LLM_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().optional(),
+  LLM_BASE_URL: z.string().optional(),
   EMBEDDING_PROVIDER: EmbeddingProviderName.default('openai'),
   EMBEDDING_API_KEY: z.string().optional(),
   EMBEDDING_MODEL: z.string().optional(),
